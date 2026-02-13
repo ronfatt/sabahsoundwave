@@ -4,7 +4,7 @@ import { DISTRICT_OPTIONS, type DistrictValue } from "@/lib/constants";
 import { getDistrictLabel } from "@/lib/district";
 import { type Lang, withLang } from "@/lib/i18n";
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type ArtistItem = {
   id: string;
@@ -46,6 +46,7 @@ type SubmissionAiInsight = {
 
 const TYPES: ArtistItem["type"][] = ["NORMAL_LISTING", "LAUNCH_SUPPORT"];
 const STATUSES: ArtistItem["status"][] = ["PENDING", "APPROVED", "REJECTED"];
+const ARTISTS_PER_PAGE = 12;
 
 export function AdminPanel({
   lang,
@@ -68,6 +69,13 @@ export function AdminPanel({
   const [selectedArtistIds, setSelectedArtistIds] = useState<string[]>([]);
   const [aiInsights, setAiInsights] = useState<Record<string, SubmissionAiInsight>>({});
   const [aiLoadingIds, setAiLoadingIds] = useState<string[]>([]);
+  const [artistQuery, setArtistQuery] = useState("");
+  const [artistStatusFilter, setArtistStatusFilter] = useState<ArtistItem["status"] | "ALL">("ALL");
+  const [artistTypeFilter, setArtistTypeFilter] = useState<ArtistItem["type"] | "ALL">("ALL");
+  const [artistDistrictFilter, setArtistDistrictFilter] = useState<DistrictValue | "ALL">("ALL");
+  const [artistFeaturedFilter, setArtistFeaturedFilter] = useState<"ALL" | "FEATURED" | "NON_FEATURED">("ALL");
+  const [artistPage, setArtistPage] = useState(1);
+  const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
 
   const groupedSubmissions = useMemo(() => {
     return TYPES.map((type) => ({
@@ -113,7 +121,22 @@ export function AdminPanel({
     manageArtists: lang === "ms" ? "Urus artis" : "Manage artists",
     saveEdits: lang === "ms" ? "Simpan perubahan" : "Save edits",
     removeFeatured: lang === "ms" ? "Buang featured" : "Remove featured",
-    setFeatured: lang === "ms" ? "Jadikan featured" : "Set featured"
+    setFeatured: lang === "ms" ? "Jadikan featured" : "Set featured",
+    searchArtists: lang === "ms" ? "Cari artis (nama/slug/genre)" : "Search artists (name/slug/genre)",
+    filterStatus: lang === "ms" ? "Status" : "Status",
+    filterType: lang === "ms" ? "Jenis" : "Type",
+    filterDistrict: lang === "ms" ? "Daerah" : "District",
+    filterFeatured: lang === "ms" ? "Featured" : "Featured",
+    all: lang === "ms" ? "Semua" : "All",
+    featuredOnly: lang === "ms" ? "Featured sahaja" : "Featured only",
+    nonFeaturedOnly: lang === "ms" ? "Bukan featured" : "Non-featured only",
+    artistsFound: lang === "ms" ? "artis ditemui" : "artists found",
+    page: lang === "ms" ? "Halaman" : "Page",
+    prev: lang === "ms" ? "Sebelum" : "Previous",
+    next: lang === "ms" ? "Seterusnya" : "Next",
+    editArtist: lang === "ms" ? "Edit artis" : "Edit artist",
+    closeEditor: lang === "ms" ? "Tutup editor" : "Close editor",
+    noArtistsMatch: lang === "ms" ? "Tiada artis sepadan dengan penapis." : "No artists match current filters."
   };
 
   function typeLabel(type: ArtistItem["type"]) {
@@ -125,6 +148,12 @@ export function AdminPanel({
     if (status === "PENDING") return lang === "ms" ? "MENUNGGU" : "PENDING";
     if (status === "APPROVED") return lang === "ms" ? "DILULUSKAN" : "APPROVED";
     return lang === "ms" ? "DITOLAK" : "REJECTED";
+  }
+
+  function featuredFilterLabel(value: "ALL" | "FEATURED" | "NON_FEATURED") {
+    if (value === "FEATURED") return t.featuredOnly;
+    if (value === "NON_FEATURED") return t.nonFeaturedOnly;
+    return t.all;
   }
 
   async function moderateSubmission(id: string, action: "approve" | "reject") {
@@ -208,6 +237,7 @@ export function AdminPanel({
     setArtists((current) => current.map((item) => (item.id === id ? { ...item, ...payload.artist } : item)));
     setSubmissions((current) => current.map((item) => (item.id === id ? { ...item, ...payload.artist } : item)));
     setStatusMessage(t.artistUpdated);
+    setEditingArtistId(null);
   }
 
   async function handleCreateDropEvent(event: FormEvent<HTMLFormElement>) {
@@ -299,6 +329,34 @@ export function AdminPanel({
       }
     }));
   }
+
+  const filteredArtists = useMemo(() => {
+    const query = artistQuery.trim().toLowerCase();
+    return artists.filter((artist) => {
+      const queryMatch =
+        !query ||
+        artist.name.toLowerCase().includes(query) ||
+        artist.slug.toLowerCase().includes(query) ||
+        artist.genres.toLowerCase().includes(query);
+      const statusMatch = artistStatusFilter === "ALL" || artist.status === artistStatusFilter;
+      const typeMatch = artistTypeFilter === "ALL" || artist.type === artistTypeFilter;
+      const districtMatch = artistDistrictFilter === "ALL" || artist.district === artistDistrictFilter;
+      const featuredMatch =
+        artistFeaturedFilter === "ALL" ||
+        (artistFeaturedFilter === "FEATURED" && artist.featured) ||
+        (artistFeaturedFilter === "NON_FEATURED" && !artist.featured);
+
+      return queryMatch && statusMatch && typeMatch && districtMatch && featuredMatch;
+    });
+  }, [artists, artistQuery, artistStatusFilter, artistTypeFilter, artistDistrictFilter, artistFeaturedFilter]);
+
+  const totalArtistPages = Math.max(1, Math.ceil(filteredArtists.length / ARTISTS_PER_PAGE));
+  const currentArtistPage = Math.min(artistPage, totalArtistPages);
+  const pagedArtists = filteredArtists.slice((currentArtistPage - 1) * ARTISTS_PER_PAGE, currentArtistPage * ARTISTS_PER_PAGE);
+
+  useEffect(() => {
+    setArtistPage(1);
+  }, [artistQuery, artistStatusFilter, artistTypeFilter, artistDistrictFilter, artistFeaturedFilter]);
 
   return (
     <section className="space-y-8">
@@ -437,73 +495,174 @@ export function AdminPanel({
 
       <div className="space-y-3">
         <h2 className="text-xl font-semibold">{t.manageArtists}</h2>
+        <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-5">
+          <input
+            value={artistQuery}
+            onChange={(event) => setArtistQuery(event.target.value)}
+            placeholder={t.searchArtists}
+            className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+          />
+          <select
+            value={artistStatusFilter}
+            onChange={(event) => setArtistStatusFilter(event.target.value as ArtistItem["status"] | "ALL")}
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="ALL">{t.filterStatus}: {t.all}</option>
+            {STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {t.filterStatus}: {statusLabel(status)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={artistTypeFilter}
+            onChange={(event) => setArtistTypeFilter(event.target.value as ArtistItem["type"] | "ALL")}
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="ALL">{t.filterType}: {t.all}</option>
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t.filterType}: {typeLabel(type)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={artistDistrictFilter}
+            onChange={(event) => setArtistDistrictFilter(event.target.value as DistrictValue | "ALL")}
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="ALL">{t.filterDistrict}: {t.all}</option>
+            {DISTRICT_OPTIONS.map((district) => (
+              <option key={district.value} value={district.value}>
+                {t.filterDistrict}: {district.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={artistFeaturedFilter}
+            onChange={(event) => setArtistFeaturedFilter(event.target.value as "ALL" | "FEATURED" | "NON_FEATURED")}
+            className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+          >
+            {(["ALL", "FEATURED", "NON_FEATURED"] as const).map((item) => (
+              <option key={item} value={item}>
+                {t.filterFeatured}: {featuredFilterLabel(item)}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center justify-end text-xs text-slate-600 md:col-span-3">
+            {filteredArtists.length} {t.artistsFound}
+          </div>
+        </div>
+
         <div className="grid gap-4">
-          {artists.map((artist) => (
-            <form key={artist.id} onSubmit={(event) => handleArtistSave(event, artist.id)} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-500">/{artist.slug}</p>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">{statusLabel(artist.status)}</span>
+          {pagedArtists.length === 0 ? <p className="text-sm text-slate-600">{t.noArtistsMatch}</p> : null}
+          {pagedArtists.map((artist) => (
+            <div key={artist.id} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-slate-900">{artist.name}</p>
+                  <p className="text-xs text-slate-500">
+                    /{artist.slug} · {getDistrictLabel(artist.district)} · {artist.genres}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">{statusLabel(artist.status)}</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditingArtistId((current) => (current === artist.id ? null : artist.id))}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
+                  >
+                    {editingArtistId === artist.id ? t.closeEditor : t.editArtist}
+                  </button>
+                </div>
               </div>
 
-              <div className="grid gap-2 md:grid-cols-2">
-                <select name="type" defaultValue={artist.type} className="rounded border border-slate-300 px-3 py-2 text-sm">
-                  <option value="NORMAL_LISTING">{lang === "ms" ? "SENARAI_BIASA" : "NORMAL_LISTING"}</option>
-                  <option value="LAUNCH_SUPPORT">LAUNCH_SUPPORT</option>
-                </select>
-                <select
-                  name="hasSongReleased"
-                  defaultValue={artist.hasSongReleased ? "yes" : "no"}
-                  className="rounded border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="yes">{lang === "ms" ? "Ada lagu sudah rilis" : "has_song_released: yes"}</option>
-                  <option value="no">{lang === "ms" ? "Belum rilis lagu" : "has_song_released: no"}</option>
-                </select>
-                <input
-                  name="contactWhatsapp"
-                  defaultValue={artist.contactWhatsapp}
-                  placeholder={lang === "ms" ? "WhatsApp untuk dihubungi" : "contact_whatsapp"}
-                  className="rounded border border-slate-300 px-3 py-2 text-sm"
-                />
-                <input
-                  name="uploadLinks"
-                  defaultValue={artist.uploadLinks || ""}
-                  placeholder={lang === "ms" ? "Link fail (opsyenal)" : "upload_links"}
-                  className="rounded border border-slate-300 px-3 py-2 text-sm"
-                />
+              {editingArtistId === artist.id ? (
+                <form onSubmit={(event) => handleArtistSave(event, artist.id)} className="space-y-3 border-t border-slate-200 pt-3">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <select name="type" defaultValue={artist.type} className="rounded border border-slate-300 px-3 py-2 text-sm">
+                      <option value="NORMAL_LISTING">{lang === "ms" ? "SENARAI_BIASA" : "NORMAL_LISTING"}</option>
+                      <option value="LAUNCH_SUPPORT">LAUNCH_SUPPORT</option>
+                    </select>
+                    <select
+                      name="hasSongReleased"
+                      defaultValue={artist.hasSongReleased ? "yes" : "no"}
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="yes">{lang === "ms" ? "Ada lagu sudah rilis" : "has_song_released: yes"}</option>
+                      <option value="no">{lang === "ms" ? "Belum rilis lagu" : "has_song_released: no"}</option>
+                    </select>
+                    <input
+                      name="contactWhatsapp"
+                      defaultValue={artist.contactWhatsapp}
+                      placeholder={lang === "ms" ? "WhatsApp untuk dihubungi" : "contact_whatsapp"}
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="uploadLinks"
+                      defaultValue={artist.uploadLinks || ""}
+                      placeholder={lang === "ms" ? "Link fail (opsyenal)" : "upload_links"}
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
 
-                <input name="name" defaultValue={artist.name} className="rounded border border-slate-300 px-3 py-2 text-sm" />
-                <select name="district" defaultValue={artist.district} className="rounded border border-slate-300 px-3 py-2 text-sm">
-                  {DISTRICT_OPTIONS.map((district) => (
-                    <option key={district.value} value={district.value}>
-                      {district.label}
-                    </option>
-                  ))}
-                </select>
-                <input name="genres" defaultValue={artist.genres} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
-                <textarea name="bio" defaultValue={artist.bio} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" rows={3} />
-                <input name="spotifyUrl" defaultValue={artist.spotifyUrl || ""} placeholder="Spotify URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
-                <input name="appleMusicUrl" defaultValue={artist.appleMusicUrl || ""} placeholder="Apple Music URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
-                <input name="youtubeUrl" defaultValue={artist.youtubeUrl || ""} placeholder="YouTube URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
-                <input
-                  name="coverImageUrl"
-                  defaultValue={artist.coverImageUrl || ""}
-                  placeholder="Cover image URL"
-                  className="rounded border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">{t.saveEdits}</button>
-                <button
-                  type="button"
-                  disabled={artist.status !== "APPROVED"}
-                  onClick={() => toggleFeatured(artist.id, artist.featured)}
-                  className="rounded-lg border border-brand-500 px-3 py-2 text-sm font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {artist.featured ? t.removeFeatured : t.setFeatured}
-                </button>
-              </div>
-            </form>
+                    <input name="name" defaultValue={artist.name} className="rounded border border-slate-300 px-3 py-2 text-sm" />
+                    <select name="district" defaultValue={artist.district} className="rounded border border-slate-300 px-3 py-2 text-sm">
+                      {DISTRICT_OPTIONS.map((district) => (
+                        <option key={district.value} value={district.value}>
+                          {district.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input name="genres" defaultValue={artist.genres} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
+                    <textarea name="bio" defaultValue={artist.bio} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" rows={3} />
+                    <input name="spotifyUrl" defaultValue={artist.spotifyUrl || ""} placeholder="Spotify URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
+                    <input name="appleMusicUrl" defaultValue={artist.appleMusicUrl || ""} placeholder="Apple Music URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
+                    <input name="youtubeUrl" defaultValue={artist.youtubeUrl || ""} placeholder="YouTube URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
+                    <input
+                      name="coverImageUrl"
+                      defaultValue={artist.coverImageUrl || ""}
+                      placeholder="Cover image URL"
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">{t.saveEdits}</button>
+                    <button
+                      type="button"
+                      disabled={artist.status !== "APPROVED"}
+                      onClick={() => toggleFeatured(artist.id, artist.featured)}
+                      className="rounded-lg border border-brand-500 px-3 py-2 text-sm font-semibold text-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {artist.featured ? t.removeFeatured : t.setFeatured}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+            </div>
           ))}
+        </div>
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+          <p>
+            {t.page} {currentArtistPage} / {totalArtistPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={currentArtistPage <= 1}
+              onClick={() => setArtistPage((current) => Math.max(1, current - 1))}
+              className="rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+            >
+              {t.prev}
+            </button>
+            <button
+              type="button"
+              disabled={currentArtistPage >= totalArtistPages}
+              onClick={() => setArtistPage((current) => Math.min(totalArtistPages, current + 1))}
+              className="rounded border border-slate-300 px-3 py-1 disabled:opacity-50"
+            >
+              {t.next}
+            </button>
+          </div>
         </div>
       </div>
     </section>
