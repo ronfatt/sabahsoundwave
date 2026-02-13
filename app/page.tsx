@@ -25,21 +25,49 @@ export default async function Home({
     genres: genre ? { contains: genre } : undefined
   };
 
-  const [featured, latest, districtCounts, nextDropEvent, dailyCandidates] = await Promise.all([
-    prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
-    prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
-    prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
-    prisma.dropEvent.findFirst({
-      where: { date: { gte: new Date() } },
-      orderBy: { date: "asc" },
-      include: { artists: { where: { status: "APPROVED" }, select: { name: true } } }
-    }),
-    prisma.artist.findMany({
-      where: { status: "APPROVED" },
-      select: { id: true, name: true, slug: true, district: true, genres: true, bio: true },
-      orderBy: { name: "asc" }
-    })
-  ]);
+  let featured: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
+  let latest: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
+  let districtCounts: Array<{ district: string; _count: { district: number } }> = [];
+  let nextDropEvent: {
+    id: string;
+    title: string;
+    date: Date;
+    description: string;
+    artists: Array<{ name: string }>;
+  } | null = null;
+  let dailyCandidates: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    district: string;
+    genres: string;
+    bio: string;
+  }> = [];
+
+  try {
+    const [f, l, d, n, c] = await Promise.all([
+      prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
+      prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
+      prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
+      prisma.dropEvent.findFirst({
+        where: { date: { gte: new Date() } },
+        orderBy: { date: "asc" },
+        include: { artists: { where: { status: "APPROVED" }, select: { name: true } } }
+      }),
+      prisma.artist.findMany({
+        where: { status: "APPROVED" },
+        select: { id: true, name: true, slug: true, district: true, genres: true, bio: true },
+        orderBy: { name: "asc" }
+      })
+    ]);
+    featured = f;
+    latest = l;
+    districtCounts = d;
+    nextDropEvent = n;
+    dailyCandidates = c;
+  } catch (error) {
+    console.error("Home page data fetch failed:", error);
+  }
 
   const districtCountMap = new Map(districtCounts.map((item) => [item.district, item._count.district]));
 
