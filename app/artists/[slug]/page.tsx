@@ -1,3 +1,4 @@
+import { getArtistSoundSignature } from "@/lib/ai-assist";
 import { Navbar } from "@/components/navbar";
 import { getDistrictLabel } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
@@ -42,6 +43,13 @@ export default async function ArtistProfile({
   if (!artist) notFound();
 
   const youtubeEmbed = getYoutubeEmbedUrl(artist.youtubeUrl);
+  const aiSignature = await getArtistSoundSignature({
+    id: artist.id,
+    name: artist.name,
+    district: artist.district,
+    genres: artist.genres,
+    bio: artist.bio
+  });
 
   return (
     <main>
@@ -90,6 +98,11 @@ export default async function ArtistProfile({
             />
           </div>
         ) : null}
+
+        <section className="rounded-2xl border border-brand-500/30 bg-slate-900/70 p-4">
+          <p className="text-xs uppercase tracking-wide text-brand-300">AI Sound Signature</p>
+          <p className="mt-2 text-sm text-slate-200">{aiSignature}</p>
+        </section>
 
         <Link href={withLang("/artists", lang)} className="inline-flex text-sm font-semibold text-brand-700 hover:text-brand-600">
           {lang === "ms" ? "Kembali ke senarai artis" : "Back to artists"}

@@ -1,5 +1,7 @@
 import { isAdmin } from "@/lib/auth";
+import { runOpenAIJson } from "@/lib/ai-assist";
 import { getDistrictLabel } from "@/lib/district";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -26,56 +28,15 @@ const triageSchema = z.object({
   youtubeUrl: z.string().nullable().optional()
 });
 
+const soundFinderSchema = z.object({
+  query: z.string().trim().min(4).max(140)
+});
+
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("bio_draft"), payload: bioDraftSchema }),
-  z.object({ action: z.literal("submission_triage"), payload: triageSchema })
+  z.object({ action: z.literal("submission_triage"), payload: triageSchema }),
+  z.object({ action: z.literal("sound_finder"), payload: soundFinderSchema })
 ]);
-
-type JsonPrimitive = string | number | boolean | null;
-type JsonValue = JsonPrimitive | JsonValue[] | { [k: string]: JsonValue };
-
-async function runOpenAIJson(prompt: string) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an assistant for Sabah Soundwave. Always return strict JSON with no markdown fences and no extra text."
-        },
-        { role: "user", content: prompt }
-      ]
-    })
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`OpenAI request failed: ${detail}`);
-  }
-
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string | null } }>;
-  };
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error("AI returned empty content");
-  }
-
-  return JSON.parse(content) as JsonValue;
-}
 
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -91,6 +52,75 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (parsed.data.action === "sound_finder") {
+      const payload = parsed.data.payload;
+      const candidates = await prisma.artist.findMany({
+        where: { status: "APPROVED" },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          district: true,
+          genres: true,
+          bio: true
+        },
+        orderBy: [{ featured: "desc" }, { updatedAt: "desc" }],
+        take: 60
+      });
+
+      if (candidates.length === 0) {
+        return NextResponse.json({ recommendations: [] });
+      }
+
+      const slugSet = new Set(candidates.map((artist) => artist.slug));
+      let mapped: Array<{ slug: string; reason: string }> = [];
+      try {
+        const prompt = `Match a listener vibe query to Sabah artists.\nReturn strict JSON with this shape only:\n{"recommendations":[{"slug":"...","reason":"..."}]}.\nRules: exactly 3 items, reason 10-18 words, specific vibe matching, no emojis.\nQuery: ${payload.query}\nCandidates: ${JSON.stringify(
+          candidates.map((artist) => ({
+            slug: artist.slug,
+            name: artist.name,
+            district: getDistrictLabel(artist.district),
+            genres: artist.genres,
+            bio: artist.bio
+          }))
+        )}`;
+        type FinderResult = { recommendations?: Array<{ slug?: string; reason?: string }> };
+        const ai = await runOpenAIJson(prompt) as FinderResult;
+        mapped = Array.isArray(ai.recommendations)
+          ? ai.recommendations
+              .filter((item): item is { slug: string; reason: string } => typeof item.slug === "string" && typeof item.reason === "string")
+              .filter((item) => slugSet.has(item.slug))
+              .slice(0, 3)
+          : [];
+      } catch {
+        mapped = [];
+      }
+
+      const fallbacks = candidates.slice(0, 3).map((artist) => ({
+        slug: artist.slug,
+        reason: `Matches "${payload.query}" with ${artist.genres.toLowerCase()} from ${getDistrictLabel(artist.district)}.`
+      }));
+
+      const chosen = mapped.length === 3 ? mapped : fallbacks;
+      const bySlug = new Map(candidates.map((artist) => [artist.slug, artist]));
+      const recommendations = chosen
+        .map((item) => {
+          const artist = bySlug.get(item.slug);
+          if (!artist) return null;
+          return {
+            id: artist.id,
+            slug: artist.slug,
+            name: artist.name,
+            district: getDistrictLabel(artist.district),
+            genres: artist.genres,
+            reason: item.reason.trim()
+          };
+        })
+        .filter(Boolean);
+
+      return NextResponse.json({ recommendations });
+    }
+
     if (parsed.data.action === "bio_draft") {
       const payload = parsed.data.payload;
       const districtLabel = getDistrictLabel(payload.district);
@@ -103,8 +133,8 @@ export async function POST(request: NextRequest) {
         existing_bio_hint: payload.existingBio || ""
       })}`;
 
-      const ai = await runOpenAIJson(prompt);
-      const bio = typeof (ai as { bio?: JsonValue }).bio === "string" ? (ai as { bio: string }).bio.trim() : "";
+      const ai = await runOpenAIJson(prompt) as { bio?: unknown };
+      const bio = typeof ai.bio === "string" ? ai.bio.trim() : "";
 
       if (!bio) {
         return NextResponse.json({ error: "AI did not return a valid bio" }, { status: 502 });

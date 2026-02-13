@@ -1,8 +1,10 @@
+import { getDailyPickReason } from "@/lib/ai-assist";
 import { ArtistCard } from "@/components/artist-card";
+import { AiSoundFinder } from "@/components/ai-sound-finder";
 import { FilterBar } from "@/components/filter-bar";
 import { Navbar } from "@/components/navbar";
 import { DISTRICT_OPTIONS } from "@/lib/constants";
-import { parseDistrict } from "@/lib/district";
+import { getDistrictLabel, parseDistrict } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
@@ -23,7 +25,7 @@ export default async function Home({
     genres: genre ? { contains: genre } : undefined
   };
 
-  const [featured, latest, districtCounts, nextDropEvent] = await Promise.all([
+  const [featured, latest, districtCounts, nextDropEvent, dailyCandidates] = await Promise.all([
     prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
     prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
     prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
@@ -31,6 +33,11 @@ export default async function Home({
       where: { date: { gte: new Date() } },
       orderBy: { date: "asc" },
       include: { artists: { where: { status: "APPROVED" }, select: { name: true } } }
+    }),
+    prisma.artist.findMany({
+      where: { status: "APPROVED" },
+      select: { id: true, name: true, slug: true, district: true, genres: true, bio: true },
+      orderBy: { name: "asc" }
     })
   ]);
 
@@ -59,8 +66,27 @@ export default async function Home({
     featured: lang === "ms" ? "Spotlight Artis Pilihan" : "Featured Spotlight",
     featuredEmpty: lang === "ms" ? "Tiada artis pilihan untuk penapis ini." : "No featured artists for this filter yet.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
-    latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter."
+    latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter.",
+    dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
+    dailyReasonLabel: lang === "ms" ? "Kenapa hari ini?" : "Why today?"
   };
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const dailyPick =
+    dailyCandidates.length > 0
+      ? dailyCandidates[
+          Number(todayKey.replace(/-/g, "")) % dailyCandidates.length
+        ]
+      : null;
+  const dailyPickReason = dailyPick
+    ? await getDailyPickReason({
+        dateKey: `${todayKey}:${dailyPick.id}`,
+        name: dailyPick.name,
+        district: dailyPick.district,
+        genres: dailyPick.genres,
+        bio: dailyPick.bio
+      })
+    : null;
 
   const whyJoin =
     lang === "ms"
@@ -101,7 +127,28 @@ export default async function Home({
           </div>
         </div>
 
-        <FilterBar district={district} genre={genre} lang={lang} />
+        <AiSoundFinder lang={lang} />
+
+        {dailyPick ? (
+          <section className="rounded-2xl border border-brand-500/25 bg-slate-900/70 p-5">
+            <p className="text-xs uppercase tracking-wide text-brand-300">{t.dailyPick}</p>
+            <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-100">{dailyPick.name}</h2>
+                <p className="text-sm text-slate-400">
+                  {getDistrictLabel(dailyPick.district)} · {dailyPick.genres}
+                </p>
+              </div>
+              <Link href={withLang(`/artists/${dailyPick.slug}`, lang)} className="rounded-lg border border-brand-400/50 px-3 py-2 text-sm font-semibold text-brand-200">
+                {lang === "ms" ? "Lihat profil" : "View profile"}
+              </Link>
+            </div>
+            <p className="mt-3 text-sm text-slate-300">
+              <span className="font-semibold text-brand-200">{t.dailyReasonLabel} </span>
+              {dailyPickReason}
+            </p>
+          </section>
+        ) : null}
 
         {nextDropEvent ? (
           <section className="rounded-2xl border border-brand-500/30 bg-slate-900/75 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
@@ -155,6 +202,8 @@ export default async function Home({
             ))}
           </div>
         </section>
+
+        <FilterBar district={district} genre={genre} lang={lang} />
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
           <h2 className="text-2xl font-semibold text-slate-100">{t.latest}</h2>
