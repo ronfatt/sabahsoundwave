@@ -32,10 +32,15 @@ const soundFinderSchema = z.object({
   query: z.string().trim().min(4).max(140)
 });
 
+const launchReadinessSchema = z.object({
+  input: z.string().trim().min(20).max(2000)
+});
+
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("bio_draft"), payload: bioDraftSchema }),
   z.object({ action: z.literal("submission_triage"), payload: triageSchema }),
-  z.object({ action: z.literal("sound_finder"), payload: soundFinderSchema })
+  z.object({ action: z.literal("sound_finder"), payload: soundFinderSchema }),
+  z.object({ action: z.literal("launch_readiness"), payload: launchReadinessSchema })
 ]);
 
 export async function POST(request: NextRequest) {
@@ -52,6 +57,42 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (parsed.data.action === "launch_readiness") {
+      const payload = parsed.data.payload;
+      type LaunchResult = {
+        score?: number;
+        suggestions?: unknown;
+        summary?: string;
+      };
+
+      let score = 55;
+      let summary = "Good base. Focus your launch messaging, release links, and posting consistency.";
+      let suggestions = [
+        "Prepare one clear release message and keep it consistent across all links.",
+        "Finalize at least one main listening link and one short promo clip.",
+        "Plan a 7-day posting schedule before and after release day."
+      ];
+
+      try {
+        const prompt = `Assess launch readiness for a Sabah music release.\nReturn strict JSON with this exact shape:\n{"score":0-100,"summary":"...","suggestions":["...","...","..."]}\nRules: score 0-100 integer, summary max 18 words, exactly 3 suggestions, each max 16 words, practical and specific.\nInput:\n${payload.input}`;
+        const ai = await runOpenAIJson(prompt) as LaunchResult;
+        if (typeof ai.score === "number") {
+          score = Math.max(0, Math.min(100, Math.round(ai.score)));
+        }
+        if (typeof ai.summary === "string" && ai.summary.trim().length > 0) {
+          summary = ai.summary.trim();
+        }
+        if (Array.isArray(ai.suggestions)) {
+          const cleaned = ai.suggestions.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3);
+          if (cleaned.length === 3) suggestions = cleaned;
+        }
+      } catch {
+        // keep fallback readiness output
+      }
+
+      return NextResponse.json({ score, summary, suggestions });
+    }
+
     if (parsed.data.action === "sound_finder") {
       const payload = parsed.data.payload;
       const candidates = await prisma.artist.findMany({
