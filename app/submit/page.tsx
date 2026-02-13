@@ -5,7 +5,7 @@ import { DISTRICT_OPTIONS, type DistrictValue } from "@/lib/constants";
 import { parseLang } from "@/lib/i18n";
 import { FormEvent, useEffect, useState } from "react";
 
-const fields = ["spotifyUrl", "appleMusicUrl", "youtubeUrl", "coverImageUrl"] as const;
+const fields = ["topTrackUrl", "spotifyUrl", "appleMusicUrl", "youtubeUrl", "coverImageUrl"] as const;
 
 type FormState = {
   type: "normal_listing" | "launch_support";
@@ -16,6 +16,8 @@ type FormState = {
   district: DistrictValue;
   genres: string;
   bio: string;
+  aiSummary: string;
+  topTrackUrl: string;
   spotifyUrl: string;
   appleMusicUrl: string;
   youtubeUrl: string;
@@ -31,6 +33,8 @@ const defaultState: FormState = {
   district: DISTRICT_OPTIONS[0].value,
   genres: "",
   bio: "",
+  aiSummary: "",
+  topTrackUrl: "",
   spotifyUrl: "",
   appleMusicUrl: "",
   youtubeUrl: "",
@@ -133,6 +137,10 @@ export default function SubmitPage() {
     name: lang === "ms" ? "Nama artis atau band" : "Artist or band name",
     genres: lang === "ms" ? "Genre (contoh: Indie, R&B)" : "Genres (e.g. Indie, R&B)",
     bio: lang === "ms" ? "Ceritakan bunyi muzik, latar belakang, dan rilisan terbaru anda" : "Tell listeners about your sound, history, and latest releases",
+    aiSummary:
+      lang === "ms"
+        ? "AI Sound Signature (opsyenal)"
+        : "AI Sound Signature (optional)",
     aiButtonIdle: lang === "ms" ? "AI bantu tulis bio" : "AI write my bio",
     aiButtonLoading: lang === "ms" ? "AI sedang jana..." : "AI generating...",
     aiHint: lang === "ms" ? "AI akan hasilkan draf, anda boleh edit semula." : "AI will generate a draft that you can edit.",
@@ -243,6 +251,8 @@ export default function SubmitPage() {
               placeholder={
                 key === "spotifyUrl"
                   ? "Spotify URL"
+                  : key === "topTrackUrl"
+                    ? "Top track URL (Listen button)"
                   : key === "appleMusicUrl"
                     ? "Apple Music URL"
                     : key === "youtubeUrl"
@@ -252,6 +262,13 @@ export default function SubmitPage() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2"
             />
           ))}
+
+          <input
+            value={form.aiSummary}
+            onChange={(event) => setForm((current) => ({ ...current, aiSummary: event.target.value }))}
+            placeholder={t.aiSummary}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2"
+          />
 
           <button disabled={submitting} className="rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700 disabled:opacity-70">
             {submitting ? t.submitLoading : t.submitIdle}

@@ -18,6 +18,8 @@ type ArtistItem = {
   district: DistrictValue;
   genres: string;
   bio: string;
+  aiSummary: string | null;
+  topTrackUrl: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
   youtubeUrl: string | null;
@@ -229,6 +231,8 @@ export function AdminPanel({
       district: textValue("district"),
       genres: textValue("genres"),
       bio: textValue("bio"),
+      aiSummary: textValue("aiSummary"),
+      topTrackUrl: textValue("topTrackUrl"),
       spotifyUrl: textValue("spotifyUrl"),
       appleMusicUrl: textValue("appleMusicUrl"),
       youtubeUrl: textValue("youtubeUrl"),
@@ -773,6 +777,8 @@ export function AdminPanel({
                     </select>
                     <input name="genres" defaultValue={artist.genres} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
                     <textarea name="bio" defaultValue={artist.bio} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" rows={3} />
+                    <input name="aiSummary" defaultValue={artist.aiSummary || ""} placeholder="AI Sound Signature" className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
+                    <input name="topTrackUrl" defaultValue={artist.topTrackUrl || ""} placeholder="Top track URL" className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
                     <input name="spotifyUrl" defaultValue={artist.spotifyUrl || ""} placeholder="Spotify URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
                     <input name="appleMusicUrl" defaultValue={artist.appleMusicUrl || ""} placeholder="Apple Music URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
                     <input name="youtubeUrl" defaultValue={artist.youtubeUrl || ""} placeholder="YouTube URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />

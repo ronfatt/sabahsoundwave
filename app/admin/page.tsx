@@ -19,6 +19,8 @@ type ArtistItem = {
   district: DistrictValue;
   genres: string;
   bio: string;
+  aiSummary: string | null;
+  topTrackUrl: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
   youtubeUrl: string | null;

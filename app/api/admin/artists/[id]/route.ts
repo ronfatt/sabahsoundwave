@@ -45,6 +45,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       district: data.district,
       genres: data.genres,
       bio: data.bio,
+      aiSummary: cleanOptional(data.aiSummary),
+      topTrackUrl: cleanOptional(data.topTrackUrl),
       spotifyUrl: cleanOptional(data.spotifyUrl),
       appleMusicUrl: cleanOptional(data.appleMusicUrl),
       youtubeUrl: cleanOptional(data.youtubeUrl),

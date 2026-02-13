@@ -48,6 +48,8 @@ model Artist {
   district        District
   genres          String
   bio             String
+  aiSummary       String?
+  topTrackUrl     String?
   spotifyUrl      String?
   appleMusicUrl   String?
   youtubeUrl      String?

@@ -231,7 +231,13 @@ export default async function Home({
           {featured.length === 0 ? <p className="text-slate-300">{t.featuredEmpty}</p> : null}
           <div className="grid gap-5 md:grid-cols-2">
             {featured.map((artist) => (
-              <ArtistCard key={artist.id} {...artist} variant="featured" lang={lang} />
+              <ArtistCard
+                key={artist.id}
+                {...artist}
+                variant="featured"
+                lang={lang}
+                topTrackUrl={artist.topTrackUrl || artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl}
+              />
             ))}
           </div>
         </section>
@@ -243,7 +249,12 @@ export default async function Home({
           {latest.length === 0 ? <p className="text-slate-400">{t.latestEmpty}</p> : null}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {latest.map((artist) => (
-              <ArtistCard key={artist.id} {...artist} lang={lang} />
+              <ArtistCard
+                key={artist.id}
+                {...artist}
+                lang={lang}
+                topTrackUrl={artist.topTrackUrl || artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl}
+              />
             ))}
           </div>
         </section>
