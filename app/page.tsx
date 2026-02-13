@@ -55,7 +55,7 @@ export default async function Home({
     explore: lang === "ms" ? "Terokai Mengikut Daerah" : "Explore by District",
     artistsCount: lang === "ms" ? "artis" : "artists",
     whyJoin: lang === "ms" ? "Kenapa Sertai" : "Why Join",
-    featured: lang === "ms" ? "Artis Pilihan" : "Featured artists",
+    featured: lang === "ms" ? "Spotlight Artis Pilihan" : "Featured Spotlight",
     featuredEmpty: lang === "ms" ? "Tiada artis pilihan untuk penapis ini." : "No featured artists for this filter yet.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
     latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter."
@@ -120,6 +120,26 @@ export default async function Home({
           </section>
         )}
 
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <h2 className="text-2xl font-semibold text-white">{t.featured}</h2>
+          {featured.length === 0 ? <p className="text-slate-300">{t.featuredEmpty}</p> : null}
+          <div className="grid gap-4 md:grid-cols-2">
+            {featured.map((artist) => (
+              <ArtistCard key={artist.id} {...artist} variant="featured" lang={lang} />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold">{t.latest}</h2>
+          {latest.length === 0 ? <p className="text-slate-600">{t.latestEmpty}</p> : null}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {latest.map((artist) => (
+              <ArtistCard key={artist.id} {...artist} lang={lang} />
+            ))}
+          </div>
+        </section>
+
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold">{t.explore}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -140,26 +160,6 @@ export default async function Home({
                 <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
                 <p className="mt-2 text-sm text-slate-600">{item.body}</p>
               </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-brand-200 bg-gradient-to-b from-brand-50 to-white p-4">
-          <h2 className="text-2xl font-semibold">{t.featured}</h2>
-          {featured.length === 0 ? <p className="text-slate-600">{t.featuredEmpty}</p> : null}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {featured.map((artist) => (
-              <ArtistCard key={artist.id} {...artist} variant="featured" lang={lang} />
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">{t.latest}</h2>
-          {latest.length === 0 ? <p className="text-slate-600">{t.latestEmpty}</p> : null}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {latest.map((artist) => (
-              <ArtistCard key={artist.id} {...artist} lang={lang} />
             ))}
           </div>
         </section>
