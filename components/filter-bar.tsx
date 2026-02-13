@@ -1,29 +1,28 @@
 "use client";
 
 import { DISTRICT_OPTIONS, GENRES } from "@/lib/constants";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Lang } from "@/lib/i18n";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 type FilterBarProps = {
   district?: string;
   genre?: string;
+  lang?: Lang;
 };
 
-export function FilterBar({ district, genre }: FilterBarProps) {
+export function FilterBar({ district, genre, lang = "en" }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [selectedDistrict, setSelectedDistrict] = useState(district || "");
   const [selectedGenre, setSelectedGenre] = useState(genre || "");
 
   function apply(nextDistrict: string, nextGenre: string) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams();
 
     if (nextDistrict) params.set("district", nextDistrict);
-    else params.delete("district");
-
     if (nextGenre) params.set("genre", nextGenre);
-    else params.delete("genre");
+    params.set("lang", lang);
 
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
@@ -41,7 +40,7 @@ export function FilterBar({ district, genre }: FilterBarProps) {
         }}
         className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
       >
-        <option value="">All districts</option>
+        <option value="">{lang === "ms" ? "Semua daerah" : "All districts"}</option>
         {DISTRICT_OPTIONS.map((item) => (
           <option key={item.value} value={item.value}>
             {item.label}
@@ -59,7 +58,7 @@ export function FilterBar({ district, genre }: FilterBarProps) {
         }}
         className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
       >
-        <option value="">All genres</option>
+        <option value="">{lang === "ms" ? "Semua genre" : "All genres"}</option>
         {GENRES.map((item) => (
           <option key={item} value={item}>
             {item}

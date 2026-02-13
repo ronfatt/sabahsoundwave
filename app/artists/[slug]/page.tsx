@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/navbar";
 import { getDistrictLabel } from "@/lib/district";
+import { parseLang, withLang } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -25,13 +26,18 @@ function getYoutubeEmbedUrl(url?: string | null) {
   }
 }
 
-export default async function ArtistProfile({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ArtistProfile({
+  params,
+  searchParams
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ lang?: string }>;
+}) {
   const { slug } = await params;
+  const { lang: langParam } = await searchParams;
+  const lang = parseLang(langParam);
 
-  const artist = await prisma.artist.findFirst({
-    where: { slug, status: "APPROVED" }
-  });
-
+  const artist = await prisma.artist.findFirst({ where: { slug, status: "APPROVED" } });
   if (!artist) notFound();
 
   const youtubeEmbed = getYoutubeEmbedUrl(artist.youtubeUrl);
@@ -54,30 +60,18 @@ export default async function ArtistProfile({ params }: { params: Promise<{ slug
 
             <div className="flex flex-wrap gap-2">
               {artist.spotifyUrl ? (
-                <Link
-                  href={artist.spotifyUrl}
-                  target="_blank"
-                  className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white"
-                >
-                  Open on Spotify
+                <Link href={artist.spotifyUrl} target="_blank" className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">
+                  {lang === "ms" ? "Buka di Spotify" : "Open on Spotify"}
                 </Link>
               ) : null}
               {artist.appleMusicUrl ? (
-                <Link
-                  href={artist.appleMusicUrl}
-                  target="_blank"
-                  className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
-                >
-                  Open on Apple Music
+                <Link href={artist.appleMusicUrl} target="_blank" className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+                  {lang === "ms" ? "Buka di Apple Music" : "Open on Apple Music"}
                 </Link>
               ) : null}
               {artist.youtubeUrl ? (
-                <Link
-                  href={artist.youtubeUrl}
-                  target="_blank"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800"
-                >
-                  Watch on YouTube
+                <Link href={artist.youtubeUrl} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
+                  {lang === "ms" ? "Tonton di YouTube" : "Watch on YouTube"}
                 </Link>
               ) : null}
             </div>
@@ -95,6 +89,10 @@ export default async function ArtistProfile({ params }: { params: Promise<{ slug
             />
           </div>
         ) : null}
+
+        <Link href={withLang("/artists", lang)} className="inline-flex text-sm font-semibold text-brand-700 hover:text-brand-600">
+          {lang === "ms" ? "Kembali ke senarai artis" : "Back to artists"}
+        </Link>
       </section>
     </main>
   );

@@ -1,40 +1,62 @@
 import { Navbar } from "@/components/navbar";
+import { parseLang, withLang } from "@/lib/i18n";
 import Link from "next/link";
 
-const packages = [
-  {
-    name: "Starter",
-    description: "Best for first-time releases. We help shape your artist profile and cleanly present your first songs.",
-    bullets: ["Profile setup guidance", "Release checklist", "Basic promo planning"]
-  },
-  {
-    name: "Pro",
-    description: "For active Sabah artists who want stronger rollout and audience growth support.",
-    bullets: ["Everything in Starter", "Campaign planning support", "Priority feature consideration"]
-  },
-  {
-    name: "Label",
-    description: "For teams or collectives handling multiple artists and regular releases.",
-    bullets: ["Multi-artist launch coordination", "Release pipeline support", "Longer-term roadmap discussion"]
-  }
-];
+export default async function LaunchSupportPage({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
+  const { lang: langParam } = await searchParams;
+  const lang = parseLang(langParam);
 
-export default function LaunchSupportPage() {
+  const packages =
+    lang === "ms"
+      ? [
+          {
+            name: "Starter",
+            description: "Sesuai untuk artis rilis pertama. Kami bantu kemaskan profil dan paparan lagu pertama anda.",
+            bullets: ["Panduan setup profil", "Semak senarai rilis", "Perancangan promosi asas"]
+          },
+          {
+            name: "Pro",
+            description: "Untuk artis Sabah yang aktif dan mahu pelancaran lebih kuat serta pertumbuhan audiens.",
+            bullets: ["Semua dalam Starter", "Sokongan perancangan kempen", "Pertimbangan priority featured"]
+          },
+          {
+            name: "Label",
+            description: "Untuk pasukan atau kolektif yang urus ramai artis dan rilis berkala.",
+            bullets: ["Koordinasi pelancaran multi-artis", "Sokongan pipeline rilis", "Perbincangan roadmap jangka panjang"]
+          }
+        ]
+      : [
+          {
+            name: "Starter",
+            description: "Best for first-time releases. We help shape your artist profile and cleanly present your first songs.",
+            bullets: ["Profile setup guidance", "Release checklist", "Basic promo planning"]
+          },
+          {
+            name: "Pro",
+            description: "For active Sabah artists who want stronger rollout and audience growth support.",
+            bullets: ["Everything in Starter", "Campaign planning support", "Priority feature consideration"]
+          },
+          {
+            name: "Label",
+            description: "For teams or collectives handling multiple artists and regular releases.",
+            bullets: ["Multi-artist launch coordination", "Release pipeline support", "Longer-term roadmap discussion"]
+          }
+        ];
+
   return (
     <main>
       <Navbar />
       <section className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 md:px-6">
         <div className="space-y-3 rounded-2xl bg-slate-900 p-6 text-white">
-          <p className="text-sm uppercase tracking-wide text-brand-100">Sabah Artist Growth</p>
+          <p className="text-sm uppercase tracking-wide text-brand-100">{lang === "ms" ? "Pertumbuhan Artis Sabah" : "Sabah Artist Growth"}</p>
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Launch Support</h1>
           <p className="max-w-3xl text-sm text-slate-200 md:text-base">
-            If you are a Sabah artist and need help launching your music, pick a support package and apply. No payment is collected yet.
+            {lang === "ms"
+              ? "Jika anda artis Sabah dan perlukan bantuan melancarkan muzik, pilih pakej sokongan dan mohon. Tiada bayaran dikutip buat masa ini."
+              : "If you are a Sabah artist and need help launching your music, pick a support package and apply. No payment is collected yet."}
           </p>
-          <Link
-            href="/submit?type=launch_support"
-            className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-          >
-            Apply for Launch Support
+          <Link href={withLang("/submit?type=launch_support", lang)} className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+            {lang === "ms" ? "Mohon Launch Support" : "Apply for Launch Support"}
           </Link>
         </div>
 

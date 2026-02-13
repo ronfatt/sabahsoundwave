@@ -1,4 +1,5 @@
 import { getDistrictLabel } from "@/lib/district";
+import { Lang, withLang } from "@/lib/i18n";
 import Link from "next/link";
 
 type ArtistCardProps = {
@@ -10,9 +11,10 @@ type ArtistCardProps = {
   coverImageUrl: string | null;
   featured?: boolean;
   variant?: "default" | "featured";
+  lang?: Lang;
 };
 
-export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, featured, variant = "default" }: ArtistCardProps) {
+export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, featured, variant = "default", lang = "en" }: ArtistCardProps) {
   const isFeaturedVariant = variant === "featured";
 
   return (
@@ -34,16 +36,16 @@ export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, f
             <p className="text-sm text-slate-600">{getDistrictLabel(district)}</p>
           </div>
           {featured ? (
-            <span className="rounded-full bg-brand-100 px-2 py-1 text-xs font-semibold text-brand-700">Featured</span>
+            <span className="rounded-full bg-brand-100 px-2 py-1 text-xs font-semibold text-brand-700">{lang === "ms" ? "Pilihan" : "Featured"}</span>
           ) : null}
         </div>
         <p className="line-clamp-2 text-sm text-slate-700">{bio}</p>
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{genres}</p>
         <Link
-          href={`/artists/${slug}`}
+          href={withLang(`/artists/${slug}`, lang)}
           className="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
         >
-          View profile
+          {lang === "ms" ? "Lihat profil" : "View profile"}
         </Link>
       </div>
     </article>
