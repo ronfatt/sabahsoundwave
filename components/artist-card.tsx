@@ -16,10 +16,13 @@ type ArtistCardProps = {
 
 export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, featured, variant = "default", lang = "en" }: ArtistCardProps) {
   const isFeaturedVariant = variant === "featured";
+  const surfaceClass = isFeaturedVariant
+    ? "bg-slate-900/80 shadow-[0_16px_36px_rgba(0,0,0,0.45)] hover:shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
+    : "bg-slate-900/75 shadow-[0_10px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_16px_30px_rgba(0,0,0,0.38)]";
 
   return (
     <article
-      className={`group overflow-hidden rounded-2xl bg-slate-900/80 shadow-[0_14px_32px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_22px_45px_rgba(0,0,0,0.5)] ${
+      className={`group overflow-hidden rounded-2xl transition duration-200 hover:-translate-y-1 ${surfaceClass} ${
         isFeaturedVariant ? "border-2 border-brand-500/70 ring-1 ring-brand-400/40" : "border border-slate-800"
       }`}
     >
@@ -36,7 +39,11 @@ export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, f
             <p className="text-sm text-slate-400">{getDistrictLabel(district)}</p>
           </div>
           {featured ? (
-            <span className="rounded-full border border-brand-400/70 bg-brand-500/15 px-2 py-1 text-xs font-semibold text-brand-300 shadow-[0_0_16px_rgba(0,245,160,0.35)]">
+            <span
+              className={`rounded-full border border-brand-400/70 bg-brand-500/15 px-2 py-1 text-xs font-semibold text-brand-300 ${
+                isFeaturedVariant ? "shadow-[0_0_10px_rgba(0,245,160,0.25)]" : ""
+              }`}
+            >
               {lang === "ms" ? "Pilihan" : "Featured"}
             </span>
           ) : null}
@@ -45,7 +52,7 @@ export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, f
         <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{genres}</p>
         <Link
           href={withLang(`/artists/${slug}`, lang)}
-          className="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-brand-500"
+          className="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-slate-950 transition duration-200 hover:scale-[1.03] hover:bg-brand-500"
         >
           {lang === "ms" ? "Lihat profil" : "View profile"}
         </Link>

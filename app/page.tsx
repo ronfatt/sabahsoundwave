@@ -37,8 +37,9 @@ export default async function Home({
   const districtCountMap = new Map(districtCounts.map((item) => [item.district, item._count.district]));
 
   const t = {
-    tag: lang === "ms" ? "Hab muzik khas Sabah" : "Sabah-only music hub",
-    title: lang === "ms" ? "Temui artis Sabah. Sokong karya tempatan." : "Discover Sabah artists. Support local releases.",
+    tag: "Sabah Soundwave",
+    title: "One State. One Sound. One Wave.",
+    subtitle: "The Official Home of Sabah Original Music.",
     desc:
       lang === "ms"
         ? "Sabah Soundwave menonjolkan artis dari Kota Kinabalu, Tawau, Sandakan dan seluruh Sabah. Dengar, kongsi dan sokong pemuzik tempatan."
@@ -77,13 +78,14 @@ export default async function Home({
   return (
     <main>
       <Navbar />
-      <section className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 md:px-6">
-        <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-night-900 via-night-800 to-night-700 px-6 py-10 text-white md:px-8 md:py-14">
+      <section className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10 md:px-6">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-night-900 via-night-800 to-night-700 px-6 py-12 text-white md:px-8 md:py-16">
           <div className="pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-brand-500/20 blur-3xl" />
           <div className="pointer-events-none absolute -right-24 bottom-0 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
           <div className="relative space-y-5">
             <p className="text-sm uppercase tracking-[0.18em] text-brand-200">{t.tag}</p>
-            <h1 className="max-w-4xl text-4xl font-extrabold leading-tight tracking-tight md:text-6xl">{t.title}</h1>
+            <h1 className="max-w-4xl text-4xl font-extrabold leading-[1.02] tracking-tight md:text-6xl">{t.title}</h1>
+            <p className="max-w-2xl text-base font-semibold text-brand-100 md:text-lg">{t.subtitle}</p>
             <p className="max-w-2xl text-base text-slate-200 md:text-lg">{t.desc}</p>
             <div className="flex flex-wrap gap-3">
               <Link href={withLang("/submit", lang)} className="glow-cta rounded-xl bg-brand-500 px-5 py-3 text-sm font-bold uppercase tracking-wide text-slate-950">
@@ -103,8 +105,15 @@ export default async function Home({
 
         {nextDropEvent ? (
           <section className="rounded-2xl border border-brand-500/30 bg-slate-900/75 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">{t.nextDrop}</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-100">{nextDropEvent.title}</h2>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-300">
+              <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-500/20 text-brand-300">
+                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current">
+                  <path d="M11.4 1.8 4.7 11h4l-1 7.2 7.6-10h-4l.1-6.4Z" />
+                </svg>
+              </span>
+              {t.nextDrop}
+            </p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-100">{nextDropEvent.title}</h2>
             <p className="mt-1 text-sm text-slate-300">
               {new Date(nextDropEvent.date).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
                 weekday: "long",
@@ -124,13 +133,20 @@ export default async function Home({
           </section>
         ) : (
           <section className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/60 p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Drop Day</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-100">{t.comingSoon}</h2>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300">
+              <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-500/15 text-brand-300">
+                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current">
+                  <path d="M11.4 1.8 4.7 11h4l-1 7.2 7.6-10h-4l.1-6.4Z" />
+                </svg>
+              </span>
+              Drop Day
+            </p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-100">{t.comingSoon}</h2>
             <p className="mt-1 text-sm text-slate-300">{t.comingSoonDesc}</p>
           </section>
         )}
 
-        <section className="space-y-4 rounded-2xl border border-brand-500/30 bg-slate-950/90 p-6 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
+        <section className="space-y-4 rounded-2xl border border-brand-500/30 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.14),transparent_40%),linear-gradient(180deg,#060b15_0%,#0b1120_100%)] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
           <h2 className="text-3xl font-bold text-white">{t.featured}</h2>
           {featured.length === 0 ? <p className="text-slate-300">{t.featuredEmpty}</p> : null}
           <div className="grid gap-5 md:grid-cols-2">
@@ -140,7 +156,7 @@ export default async function Home({
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
           <h2 className="text-2xl font-semibold text-slate-100">{t.latest}</h2>
           {latest.length === 0 ? <p className="text-slate-400">{t.latestEmpty}</p> : null}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -157,8 +173,13 @@ export default async function Home({
               <Link
                 key={item.value}
                 href={withLang(`/artists?district=${item.value}`, lang)}
-                className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3 text-center shadow-sm transition duration-200 hover:scale-[1.02] hover:border-brand-400 hover:shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+                className={`rounded-xl border px-3 py-3 text-center shadow-sm transition duration-200 hover:scale-[1.02] hover:shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${
+                  district === item.value
+                    ? "border-brand-400 bg-slate-900/90 shadow-[inset_0_0_18px_rgba(0,245,160,0.18)]"
+                    : "border-slate-700 bg-slate-900/70 hover:border-brand-400 hover:shadow-[inset_0_0_12px_rgba(0,245,160,0.12)]"
+                }`}
               >
+                <p className="text-[10px] uppercase tracking-widest text-brand-300">~</p>
                 <p className="text-sm font-semibold text-slate-100">{item.shortLabel}</p>
                 <p className="text-xs text-slate-400">
                   {districtCountMap.get(item.value) ?? 0} {t.artistsCount}
