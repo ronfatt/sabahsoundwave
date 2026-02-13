@@ -18,46 +18,64 @@ export default async function LaunchSupportPage({ searchParams }: { searchParams
           {
             name: "Starter",
             description: "Sesuai untuk artis rilis pertama. Kami bantu kemaskan profil dan paparan lagu pertama anda.",
-            bullets: ["Panduan setup profil", "Semak senarai rilis", "Perancangan promosi asas"],
+            bullets: [
+              "Panduan distribution (Spotify / Apple / YouTube)",
+              "AI-assisted bio positioning",
+              "Perancangan release timeline",
+              "Template strategi promosi",
+              "Kelayakan untuk Drop Day"
+            ],
             status: "Currently Open",
-            highlight: true
+            highlight: true,
+            price: "RM199 (placeholder)"
           },
           {
             name: "Pro",
             description: "Untuk artis Sabah yang aktif dan mahu pelancaran lebih kuat serta pertumbuhan audiens.",
             bullets: ["Semua dalam Starter", "Sokongan perancangan kempen", "Pertimbangan priority featured"],
-            status: "By Invitation",
-            highlight: false
+            status: "Invitation Only",
+            highlight: false,
+            price: "Contact us"
           },
           {
             name: "Label",
             description: "Untuk pasukan atau kolektif yang urus ramai artis dan rilis berkala.",
             bullets: ["Koordinasi pelancaran multi-artis", "Sokongan pipeline rilis", "Perbincangan roadmap jangka panjang"],
-            status: "Coming Soon",
-            highlight: false
+            status: "By Partnership",
+            highlight: false,
+            price: "Partnership"
           }
         ]
       : [
           {
             name: "Starter",
             description: "Best for first-time releases. We help shape your artist profile and cleanly present your first songs.",
-            bullets: ["Profile setup guidance", "Release checklist", "Basic promo planning"],
+            bullets: [
+              "Distribution guidance (Spotify / Apple / YouTube)",
+              "AI-assisted bio positioning",
+              "Release timeline planning",
+              "Promo strategy template",
+              "Drop Day eligibility"
+            ],
             status: "Currently Open",
-            highlight: true
+            highlight: true,
+            price: "RM199 (placeholder)"
           },
           {
             name: "Pro",
             description: "For active Sabah artists who want stronger rollout and audience growth support.",
             bullets: ["Everything in Starter", "Campaign planning support", "Priority feature consideration"],
-            status: "By Invitation",
-            highlight: false
+            status: "Invitation Only",
+            highlight: false,
+            price: "Contact us"
           },
           {
             name: "Label",
             description: "For teams or collectives handling multiple artists and regular releases.",
             bullets: ["Multi-artist launch coordination", "Release pipeline support", "Longer-term roadmap discussion"],
-            status: "Coming Soon",
-            highlight: false
+            status: "By Partnership",
+            highlight: false,
+            price: "Partnership"
           }
         ];
 
@@ -125,6 +143,7 @@ export default async function LaunchSupportPage({ searchParams }: { searchParams
                   : item.status}
               </p>
               <h2 className="text-2xl font-semibold text-slate-100">{item.name}</h2>
+              <p className="text-sm font-semibold text-brand-200">{item.price}</p>
               <p className="text-sm text-slate-300">{item.description}</p>
               <ul className="space-y-1 text-sm text-slate-300">
                 {item.bullets.map((bullet) => (

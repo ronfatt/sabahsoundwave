@@ -61,36 +61,52 @@ export async function POST(request: NextRequest) {
       const payload = parsed.data.payload;
       type LaunchResult = {
         score?: number;
-        suggestions?: unknown;
-        summary?: string;
+        strengths?: unknown;
+        improvements?: unknown;
+        roadmap?: unknown;
       };
 
       let score = 55;
-      let summary = "Good base. Focus your launch messaging, release links, and posting consistency.";
-      let suggestions = [
-        "Prepare one clear release message and keep it consistent across all links.",
-        "Finalize at least one main listening link and one short promo clip.",
-        "Plan a 7-day posting schedule before and after release day."
+      let strengths = [
+        "Clear artist identity and genre direction.",
+        "Strong local Sabah story angle.",
+        "Good intent to launch with supporting materials."
+      ];
+      let improvements = [
+        "Finalize main release links before launch week.",
+        "Sharpen one core message for all promo posts.",
+        "Prepare short-form teaser assets in advance."
+      ];
+      let roadmap = [
+        "Week 1: finalize positioning, bio, and release metadata.",
+        "Week 2: prep teaser content and outreach list.",
+        "Week 3: release push plus creator/community reposts."
       ];
 
       try {
-        const prompt = `Assess launch readiness for a Sabah music release.\nReturn strict JSON with this exact shape:\n{"score":0-100,"summary":"...","suggestions":["...","...","..."]}\nRules: score 0-100 integer, summary max 18 words, exactly 3 suggestions, each max 16 words, practical and specific.\nInput:\n${payload.input}`;
+        const prompt = `Assess launch readiness for a Sabah music release.\nReturn strict JSON with this exact shape:\n{"score":0-100,"strengths":["...","...","..."],"improvements":["...","...","..."],"roadmap":["...","...","..."]}\nRules: score 0-100 integer, exactly 3 items per array, each item max 16 words, practical and specific, no emojis.\nInput:\n${payload.input}`;
         const ai = await runOpenAIJson(prompt) as LaunchResult;
         if (typeof ai.score === "number") {
           score = Math.max(0, Math.min(100, Math.round(ai.score)));
         }
-        if (typeof ai.summary === "string" && ai.summary.trim().length > 0) {
-          summary = ai.summary.trim();
+
+        if (Array.isArray(ai.strengths)) {
+          const cleaned = ai.strengths.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3);
+          if (cleaned.length === 3) strengths = cleaned;
         }
-        if (Array.isArray(ai.suggestions)) {
-          const cleaned = ai.suggestions.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3);
-          if (cleaned.length === 3) suggestions = cleaned;
+        if (Array.isArray(ai.improvements)) {
+          const cleaned = ai.improvements.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3);
+          if (cleaned.length === 3) improvements = cleaned;
+        }
+        if (Array.isArray(ai.roadmap)) {
+          const cleaned = ai.roadmap.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3);
+          if (cleaned.length === 3) roadmap = cleaned;
         }
       } catch {
         // keep fallback readiness output
       }
 
-      return NextResponse.json({ score, summary, suggestions });
+      return NextResponse.json({ score, strengths, improvements, roadmap });
     }
 
     if (parsed.data.action === "sound_finder") {

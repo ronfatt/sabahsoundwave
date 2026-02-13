@@ -6,8 +6,9 @@ import { FormEvent, useState } from "react";
 
 type Result = {
   score: number;
-  summary: string;
-  suggestions: string[];
+  strengths: string[];
+  improvements: string[];
+  roadmap: string[];
 };
 
 export function LaunchReadinessCheck({ lang }: { lang: Lang }) {
@@ -71,12 +72,44 @@ export function LaunchReadinessCheck({ lang }: { lang: Lang }) {
           <p className="text-sm text-slate-200">
             <span className="font-semibold text-brand-300">Readiness Score:</span> {result.score}/100
           </p>
-          <p className="text-sm text-slate-300">{result.summary}</p>
-          <ul className="space-y-1 text-sm text-slate-300">
-            {result.suggestions.map((item) => (
-              <li key={item}>• {item}</li>
-            ))}
-          </ul>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-400 to-emerald-300 transition-all"
+              style={{ width: `${result.score}%` }}
+            />
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-200">
+                {lang === "ms" ? "Kekuatan" : "Strengths"}
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-300">
+                {result.strengths.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-200">
+                {lang === "ms" ? "Penambahbaikan" : "Improvements"}
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-300">
+                {result.improvements.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-200">
+                {lang === "ms" ? "Roadmap" : "Roadmap"}
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-300">
+                {result.roadmap.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
           <Link href={withLang("/submit?type=launch_support", lang)} className="inline-flex rounded-lg border border-brand-400/50 px-3 py-2 text-sm font-semibold text-brand-200 hover:border-brand-300 hover:text-brand-100">
             {lang === "ms" ? "Mohon Launch Support" : "Apply for Launch Support"}
           </Link>
