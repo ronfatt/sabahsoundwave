@@ -4,6 +4,11 @@ import { DISTRICT_OPTIONS, GENRES } from "@/lib/constants";
 import { parseDistrict } from "@/lib/district";
 import { parseLang } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Artists"
+};
 
 export default async function ArtistsPage({
   searchParams

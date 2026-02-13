@@ -2,6 +2,7 @@ import { Navbar } from "@/components/navbar";
 import { getDistrictLabel } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
+import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -96,4 +97,24 @@ export default async function ArtistProfile({
       </section>
     </main>
   );
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const artist = await prisma.artist.findFirst({
+    where: { slug, status: "APPROVED" },
+    select: { name: true, bio: true }
+  });
+
+  if (!artist) {
+    return {
+      title: "Artist",
+      description: "Discover Sabah artists, bands, and original music."
+    };
+  }
+
+  return {
+    title: `${artist.name} – Sabah Artist`,
+    description: artist.bio
+  };
 }

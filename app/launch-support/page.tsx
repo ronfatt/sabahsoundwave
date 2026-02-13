@@ -1,6 +1,11 @@
 import { Navbar } from "@/components/navbar";
 import { parseLang, withLang } from "@/lib/i18n";
 import Link from "next/link";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Launch Support"
+};
 
 export default async function LaunchSupportPage({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
   const { lang: langParam } = await searchParams;
