@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ListingType {
+  NORMAL_LISTING
+  LAUNCH_SUPPORT
+}
+
+enum District {
+  KOTA_KINABALU
+  PAPAR
+  PENAMPANG
+  TUARAN
+  RANAU
+  KUDAT
+  SANDAKAN
+  LAHAD_DATU
+  TAWAU
+  SEMPORNA
+  KENINGAU
+  BEAUFORT
+  SIPITANG
+  TAMBUNAN
+  KOTA_BELUD
+}
+
+model Artist {
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  status          SubmissionStatus @default(PENDING)
+  type            ListingType      @default(NORMAL_LISTING)
+  hasSongReleased Boolean          @default(false)
+  uploadLinks     String?
+  contactWhatsapp String
+  name            String
+  district        District
+  genres          String
+  bio             String
+  spotifyUrl      String?
+  appleMusicUrl   String?
+  youtubeUrl      String?
+  coverImageUrl   String?
+  featured        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  dropEvents      DropEvent[]
+
+  @@index([district])
+  @@index([status])
+  @@index([type])
+}
+
+model DropEvent {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  description String
+  artists     Artist[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+}
