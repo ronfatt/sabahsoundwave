@@ -9,16 +9,23 @@ type ArtistCardProps = {
   genres: string;
   bio: string;
   coverImageUrl: string | null;
+  topTrackUrl?: string | null;
   featured?: boolean;
   variant?: "default" | "featured";
   lang?: Lang;
 };
 
-export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, featured, variant = "default", lang = "en" }: ArtistCardProps) {
+export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, topTrackUrl, featured, variant = "default", lang = "en" }: ArtistCardProps) {
   const isFeaturedVariant = variant === "featured";
   const surfaceClass = isFeaturedVariant
     ? "bg-slate-900/80 shadow-[0_16px_36px_rgba(0,0,0,0.45)] hover:shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
     : "bg-slate-900/75 shadow-[0_10px_24px_rgba(0,0,0,0.3)] hover:shadow-[0_16px_30px_rgba(0,0,0,0.38)]";
+  const tokens = genres
+    .split(/[,/|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const shownTags = tokens.slice(0, 2);
+  const extraCount = Math.max(tokens.length - shownTags.length, 0);
 
   return (
     <article
@@ -49,13 +56,35 @@ export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, f
           ) : null}
         </div>
         <p className="line-clamp-2 text-sm text-slate-300">{bio}</p>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{genres}</p>
-        <Link
-          href={withLang(`/artists/${slug}`, lang)}
-          className="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-slate-950 transition duration-200 hover:scale-[1.03] hover:bg-brand-500"
-        >
-          {lang === "ms" ? "Lihat profil" : "View profile"}
-        </Link>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {shownTags.map((tag) => (
+            <span key={tag} className="rounded-full border border-slate-700 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+              {tag}
+            </span>
+          ))}
+          {extraCount > 0 ? (
+            <span className="rounded-full border border-slate-700 bg-slate-950/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              +{extraCount}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={withLang(`/artists/${slug}`, lang)}
+            className="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-slate-950 transition duration-200 hover:scale-[1.03] hover:bg-brand-500"
+          >
+            {lang === "ms" ? "Lihat profil" : "View profile"}
+          </Link>
+          {topTrackUrl ? (
+            <Link
+              href={topTrackUrl}
+              target="_blank"
+              className="inline-flex rounded-lg border border-brand-400/50 px-3 py-2 text-sm font-semibold text-brand-200 transition hover:border-brand-300 hover:text-brand-100"
+            >
+              {lang === "ms" ? "Dengar" : "Listen"}
+            </Link>
+          ) : null}
+        </div>
       </div>
     </article>
   );
