@@ -76,6 +76,11 @@ export function AdminPanel({
   const [artistFeaturedFilter, setArtistFeaturedFilter] = useState<"ALL" | "FEATURED" | "NON_FEATURED">("ALL");
   const [artistPage, setArtistPage] = useState(1);
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
+  const [editingDropId, setEditingDropId] = useState<string | null>(null);
+  const [editingDropTitle, setEditingDropTitle] = useState("");
+  const [editingDropDate, setEditingDropDate] = useState("");
+  const [editingDropDescription, setEditingDropDescription] = useState("");
+  const [editingDropArtistIds, setEditingDropArtistIds] = useState<string[]>([]);
 
   const groupedSubmissions = useMemo(() => {
     return TYPES.map((type) => ({
@@ -99,6 +104,11 @@ export function AdminPanel({
     dropDateInvalid: lang === "ms" ? "Tarikh Drop tidak sah" : "Drop date is invalid",
     dropCreateFailed: lang === "ms" ? "Penciptaan Drop Day gagal" : "Drop Day creation failed",
     dropCreated: lang === "ms" ? "Drop Day berjaya dibuat" : "Drop Day created",
+    dropUpdateFailed: lang === "ms" ? "Kemaskini Drop Day gagal" : "Drop Day update failed",
+    dropUpdated: lang === "ms" ? "Drop Day berjaya dikemas kini" : "Drop Day updated",
+    dropDeleteFailed: lang === "ms" ? "Padam Drop Day gagal" : "Drop Day delete failed",
+    dropDeleted: lang === "ms" ? "Drop Day berjaya dipadam" : "Drop Day deleted",
+    confirmDeleteDrop: lang === "ms" ? "Padam Drop Day ini?" : "Delete this Drop Day?",
     aiPrecheckFailed: lang === "ms" ? "Semakan AI gagal" : "AI precheck failed",
     dropDayManager: "Drop Day Manager",
     dropTitle: lang === "ms" ? "Tajuk Drop" : "Drop title",
@@ -109,6 +119,10 @@ export function AdminPanel({
     lineup: lang === "ms" ? "Barisan" : "Lineup",
     none: lang === "ms" ? "Tiada" : "None",
     openPublic: lang === "ms" ? "Buka halaman awam" : "Open public page",
+    edit: lang === "ms" ? "Edit" : "Edit",
+    cancel: lang === "ms" ? "Batal" : "Cancel",
+    save: lang === "ms" ? "Simpan" : "Save",
+    delete: lang === "ms" ? "Padam" : "Delete",
     grouped: lang === "ms" ? "Submission ikut jenis dan status" : "Submissions grouped by type and status",
     noItems: lang === "ms" ? "Tiada item" : "No items",
     aiPackage: lang === "ms" ? "Cadangan pakej AI" : "AI recommended package",
@@ -288,6 +302,82 @@ export function AdminPanel({
     );
   }
 
+  function toggleEditingDropArtistSelection(artistId: string) {
+    setEditingDropArtistIds((current) =>
+      current.includes(artistId) ? current.filter((id) => id !== artistId) : [...current, artistId]
+    );
+  }
+
+  function toDateTimeLocalValue(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const tzAdjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return tzAdjusted.toISOString().slice(0, 16);
+  }
+
+  function startEditingDropEvent(event: DropEventItem) {
+    setEditingDropId(event.id);
+    setEditingDropTitle(event.title);
+    setEditingDropDate(toDateTimeLocalValue(event.date));
+    setEditingDropDescription(event.description);
+    setEditingDropArtistIds(event.artists.map((artist) => artist.id));
+  }
+
+  async function handleDropEventUpdate(eventId: string) {
+    if (!editingDropDate) {
+      setStatusMessage(t.dropDateRequired);
+      return;
+    }
+
+    const date = new Date(editingDropDate);
+    if (Number.isNaN(date.getTime())) {
+      setStatusMessage(t.dropDateInvalid);
+      return;
+    }
+
+    const response = await fetch(`/api/admin/drop-events/${eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: editingDropTitle,
+        date: date.toISOString(),
+        description: editingDropDescription,
+        artistIds: editingDropArtistIds
+      })
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload) {
+      setStatusMessage(payload?.error || t.dropUpdateFailed);
+      return;
+    }
+
+    setDropEvents((current) =>
+      current
+        .map((item) => (item.id === eventId ? payload.event : item))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    );
+    setEditingDropId(null);
+    setStatusMessage(t.dropUpdated);
+  }
+
+  async function handleDropEventDelete(eventId: string) {
+    if (!window.confirm(t.confirmDeleteDrop)) return;
+
+    const response = await fetch(`/api/admin/drop-events/${eventId}`, { method: "DELETE" });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      setStatusMessage(payload?.error || t.dropDeleteFailed);
+      return;
+    }
+
+    setDropEvents((current) => current.filter((item) => item.id !== eventId));
+    if (editingDropId === eventId) {
+      setEditingDropId(null);
+    }
+    setStatusMessage(t.dropDeleted);
+  }
+
   async function runAiPrecheck(item: ArtistItem) {
     setAiLoadingIds((current) => [...current, item.id]);
 
@@ -423,9 +513,77 @@ export function AdminPanel({
                 <p className="mt-2 text-xs text-slate-600">
                   {t.lineup}: {event.artists.map((a) => a.name).join(", ") || t.none}
                 </p>
-                <Link href={withLang(`/drop/${event.id}`, lang)} className="mt-2 inline-flex text-sm font-semibold text-brand-700 hover:text-brand-600">
-                  {t.openPublic}
-                </Link>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link href={withLang(`/drop/${event.id}`, lang)} className="inline-flex text-sm font-semibold text-brand-700 hover:text-brand-600">
+                    {t.openPublic}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => (editingDropId === event.id ? setEditingDropId(null) : startEditingDropEvent(event))}
+                    className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700"
+                  >
+                    {editingDropId === event.id ? t.cancel : t.edit}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDropEventDelete(event.id)}
+                    className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700"
+                  >
+                    {t.delete}
+                  </button>
+                </div>
+
+                {editingDropId === event.id ? (
+                  <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                    <input
+                      value={editingDropTitle}
+                      onChange={(e) => setEditingDropTitle(e.target.value)}
+                      placeholder={t.dropTitle}
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={editingDropDate}
+                      onChange={(e) => setEditingDropDate(e.target.value)}
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <textarea
+                      value={editingDropDescription}
+                      onChange={(e) => setEditingDropDescription(e.target.value)}
+                      placeholder={t.dropDescription}
+                      rows={3}
+                      className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <div className="grid gap-2 rounded border border-slate-200 p-3">
+                      {approvedArtists.map((artist) => (
+                        <label key={artist.id} className="flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={editingDropArtistIds.includes(artist.id)}
+                            onChange={() => toggleEditingDropArtistSelection(artist.id)}
+                          />
+                          <span>{artist.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDropEventUpdate(event.id)}
+                        className="rounded bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+                      >
+                        {t.save}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingDropId(null)}
+                        className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
+                      >
+                        {t.cancel}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
