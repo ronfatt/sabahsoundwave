@@ -29,7 +29,7 @@ export function FilterBar({ district, genre, lang = "en" }: FilterBarProps) {
   }
 
   return (
-    <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2">
+    <div className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900/70 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.25)] md:grid-cols-2">
       <select
         name="district"
         value={selectedDistrict}
@@ -38,7 +38,7 @@ export function FilterBar({ district, genre, lang = "en" }: FilterBarProps) {
           setSelectedDistrict(value);
           apply(value, selectedGenre);
         }}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+        className="rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 transition focus:border-brand-500 focus:outline-none"
       >
         <option value="">{lang === "ms" ? "Semua daerah" : "All districts"}</option>
         {DISTRICT_OPTIONS.map((item) => (
@@ -56,7 +56,7 @@ export function FilterBar({ district, genre, lang = "en" }: FilterBarProps) {
           setSelectedGenre(value);
           apply(selectedDistrict, value);
         }}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+        className="rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 transition focus:border-brand-500 focus:outline-none"
       >
         <option value="">{lang === "ms" ? "Semua genre" : "All genres"}</option>
         {GENRES.map((item) => (

@@ -19,12 +19,12 @@ export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, f
 
   return (
     <article
-      className={`overflow-hidden rounded-2xl bg-white shadow-sm ${
-        isFeaturedVariant ? "border-2 border-brand-300 ring-2 ring-brand-100" : "border border-slate-200"
+      className={`group overflow-hidden rounded-2xl bg-slate-900/80 shadow-[0_14px_32px_rgba(0,0,0,0.35)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_22px_45px_rgba(0,0,0,0.5)] ${
+        isFeaturedVariant ? "border-2 border-brand-500/70 ring-1 ring-brand-400/40" : "border border-slate-800"
       }`}
     >
       <div
-        className={`${isFeaturedVariant ? "h-48" : "h-40"} w-full bg-cover bg-center`}
+        className={`${isFeaturedVariant ? "h-56" : "h-44"} w-full bg-cover bg-center`}
         style={{
           backgroundImage: `url(${coverImageUrl || "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=1200&q=80"})`
         }}
@@ -32,18 +32,20 @@ export function ArtistCard({ slug, name, district, genres, bio, coverImageUrl, f
       <div className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">{name}</h3>
-            <p className="text-sm text-slate-600">{getDistrictLabel(district)}</p>
+            <h3 className="text-lg font-semibold text-slate-100">{name}</h3>
+            <p className="text-sm text-slate-400">{getDistrictLabel(district)}</p>
           </div>
           {featured ? (
-            <span className="rounded-full bg-brand-100 px-2 py-1 text-xs font-semibold text-brand-700">{lang === "ms" ? "Pilihan" : "Featured"}</span>
+            <span className="rounded-full border border-brand-400/70 bg-brand-500/15 px-2 py-1 text-xs font-semibold text-brand-300 shadow-[0_0_16px_rgba(0,245,160,0.35)]">
+              {lang === "ms" ? "Pilihan" : "Featured"}
+            </span>
           ) : null}
         </div>
-        <p className="line-clamp-2 text-sm text-slate-700">{bio}</p>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{genres}</p>
+        <p className="line-clamp-2 text-sm text-slate-300">{bio}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{genres}</p>
         <Link
           href={withLang(`/artists/${slug}`, lang)}
-          className="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+          className="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-brand-500"
         >
           {lang === "ms" ? "Lihat profil" : "View profile"}
         </Link>
