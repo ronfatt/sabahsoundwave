@@ -5,9 +5,9 @@ import Link from "next/link";
 type ArtistCardProps = {
   slug: string;
   name: string;
-  district: string;
-  genres: string;
-  bio: string;
+  district: string | null;
+  genres: string | null;
+  bio: string | null;
   aiSummary?: string | null;
   coverImageUrl: string | null;
   spotifyUrl?: string | null;
@@ -18,6 +18,20 @@ type ArtistCardProps = {
   variant?: "default" | "featured";
   lang?: Lang;
 };
+
+function toSafeExternalUrl(value?: string | null) {
+  if (!value) return null;
+  const raw = value.trim();
+  if (!raw) return null;
+  const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 function PlatformIcon({ kind }: { kind: "spotify" | "youtube" | "apple" }) {
   return (
@@ -44,11 +58,17 @@ export function ArtistCard({
   lang = "en"
 }: ArtistCardProps) {
   const isFeaturedVariant = variant === "featured";
-  const listenUrl = topTrackUrl || spotifyUrl || youtubeUrl || appleMusicUrl;
+  const safeSpotifyUrl = toSafeExternalUrl(spotifyUrl);
+  const safeYoutubeUrl = toSafeExternalUrl(youtubeUrl);
+  const safeAppleMusicUrl = toSafeExternalUrl(appleMusicUrl);
+  const listenUrl = toSafeExternalUrl(topTrackUrl) || safeSpotifyUrl || safeYoutubeUrl || safeAppleMusicUrl;
+  const safeGenres = typeof genres === "string" ? genres : "";
+  const safeBio = typeof bio === "string" && bio.trim().length > 0 ? bio : lang === "ms" ? "Bio akan dikemas kini." : "Bio will be updated.";
+  const districtLabel = district ? getDistrictLabel(district) : "Sabah";
   const surfaceClass = isFeaturedVariant
     ? "bg-[linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95))] shadow-[0_16px_36px_rgba(0,0,0,0.45)]"
     : "bg-[linear-gradient(180deg,rgba(15,23,42,0.78),rgba(2,6,23,0.88))] shadow-[0_10px_24px_rgba(0,0,0,0.3)]";
-  const tokens = genres
+  const tokens = safeGenres
     .split(/[,/|]/)
     .map((item) => item.trim())
     .filter(Boolean);
@@ -84,15 +104,15 @@ export function ArtistCard({
         ) : null}
 
         <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
-          {spotifyUrl ? <PlatformIcon kind="spotify" /> : null}
-          {youtubeUrl ? <PlatformIcon kind="youtube" /> : null}
-          {appleMusicUrl ? <PlatformIcon kind="apple" /> : null}
+          {safeSpotifyUrl ? <PlatformIcon kind="spotify" /> : null}
+          {safeYoutubeUrl ? <PlatformIcon kind="youtube" /> : null}
+          {safeAppleMusicUrl ? <PlatformIcon kind="apple" /> : null}
         </div>
       </div>
       <div className="space-y-3 p-4">
         <div>
           <h3 className="text-lg font-semibold text-slate-100">{name}</h3>
-          <p className="text-sm text-slate-400">{getDistrictLabel(district)}</p>
+          <p className="text-sm text-slate-400">{districtLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {shownTags.map((tag) => (
@@ -113,17 +133,18 @@ export function ArtistCard({
           </p>
         ) : null}
 
-        <p className="line-clamp-2 text-sm text-slate-300">{bio}</p>
+        <p className="line-clamp-2 text-sm text-slate-300">{safeBio}</p>
 
         <div className="flex flex-wrap gap-2">
           {listenUrl ? (
-            <Link
+            <a
               href={listenUrl}
               target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-brand-400"
             >
               {lang === "ms" ? "Dengar" : "Listen"}
-            </Link>
+            </a>
           ) : null}
           <Link
             href={withLang(`/artists/${slug}`, lang)}

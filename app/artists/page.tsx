@@ -38,14 +38,23 @@ export default async function ArtistsPage({
     OR: q ? [{ name: { contains: q } }, { bio: { contains: q } }, { genres: { contains: q } }] : undefined
   };
 
-  const [artists, featuredArtists] = await Promise.all([
-    prisma.artist.findMany({ where, orderBy }),
-    prisma.artist.findMany({
-      where: { ...where, featured: true },
-      orderBy: [{ updatedAt: "desc" }],
-      take: 10
-    })
-  ]);
+  let artists: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
+  let featuredArtists: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
+  let loadError = false;
+
+  try {
+    [artists, featuredArtists] = await Promise.all([
+      prisma.artist.findMany({ where, orderBy }),
+      prisma.artist.findMany({
+        where: { ...where, featured: true },
+        orderBy: [{ updatedAt: "desc" }],
+        take: 10
+      })
+    ]);
+  } catch (error) {
+    loadError = true;
+    console.error("Artists page data fetch failed:", error);
+  }
 
   return (
     <main>
@@ -57,6 +66,14 @@ export default async function ArtistsPage({
         </div>
 
         <ArtistsDiscoveryControls lang={lang} resultCount={artists.length} />
+
+        {loadError ? (
+          <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {lang === "ms"
+              ? "Data artis tidak dapat dimuatkan sepenuhnya. Sila cuba sebentar lagi."
+              : "Artist data could not be fully loaded. Please try again shortly."}
+          </p>
+        ) : null}
 
         {featuredArtists.length > 0 ? (
           <section className="space-y-3">
