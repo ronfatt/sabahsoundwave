@@ -43,13 +43,18 @@ export default async function ArtistProfile({
   if (!artist) notFound();
 
   const youtubeEmbed = getYoutubeEmbedUrl(artist.youtubeUrl);
-  const aiSignature = await getArtistSoundSignature({
-    id: artist.id,
-    name: artist.name,
-    district: artist.district,
-    genres: artist.genres,
-    bio: artist.bio
-  });
+  let aiSignature = `${artist.genres} rooted in ${getDistrictLabel(artist.district)}, blending Sabah mood with expressive local storytelling.`;
+  try {
+    aiSignature = await getArtistSoundSignature({
+      id: artist.id,
+      name: artist.name,
+      district: artist.district,
+      genres: artist.genres,
+      bio: artist.bio
+    });
+  } catch {
+    // Fallback signature keeps profile render stable even if AI service fails.
+  }
 
   return (
     <main>

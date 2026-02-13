@@ -78,15 +78,20 @@ export default async function Home({
           Number(todayKey.replace(/-/g, "")) % dailyCandidates.length
         ]
       : null;
-  const dailyPickReason = dailyPick
-    ? await getDailyPickReason({
+  let dailyPickReason: string | null = null;
+  if (dailyPick) {
+    try {
+      dailyPickReason = await getDailyPickReason({
         dateKey: `${todayKey}:${dailyPick.id}`,
         name: dailyPick.name,
         district: dailyPick.district,
         genres: dailyPick.genres,
         bio: dailyPick.bio
-      })
-    : null;
+      });
+    } catch {
+      dailyPickReason = `Blends ${dailyPick.genres.toLowerCase()} with ${getDistrictLabel(dailyPick.district)} atmosphere for immersive Sabah listening sessions.`;
+    }
+  }
 
   const whyJoin =
     lang === "ms"
