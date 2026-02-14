@@ -3,6 +3,11 @@
 import { Navbar } from "@/components/navbar";
 import { DISTRICT_OPTIONS, type DistrictValue } from "@/lib/constants";
 import { parseLang } from "@/lib/i18n";
+import {
+  STARTER_AGREEMENT_PARAGRAPHS,
+  STARTER_AGREEMENT_TITLE,
+  STARTER_AGREEMENT_VERSION
+} from "@/lib/starter-agreement";
 import { FormEvent, useEffect, useState } from "react";
 
 const fields = ["topTrackUrl", "spotifyUrl", "appleMusicUrl", "youtubeUrl", "coverImageUrl"] as const;
@@ -22,6 +27,8 @@ type FormState = {
   appleMusicUrl: string;
   youtubeUrl: string;
   coverImageUrl: string;
+  starterAgreementAccepted: boolean;
+  starterAgreementVersion: string;
 };
 
 const defaultState: FormState = {
@@ -38,7 +45,9 @@ const defaultState: FormState = {
   spotifyUrl: "",
   appleMusicUrl: "",
   youtubeUrl: "",
-  coverImageUrl: ""
+  coverImageUrl: "",
+  starterAgreementAccepted: false,
+  starterAgreementVersion: STARTER_AGREEMENT_VERSION
 };
 
 export default function SubmitPage() {
@@ -49,6 +58,8 @@ export default function SubmitPage() {
   const [submitting, setSubmitting] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [agreementChecked, setAgreementChecked] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -60,16 +71,21 @@ export default function SubmitPage() {
     }
   }, []);
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function submitApplication() {
     setSubmitting(true);
     setError("");
     setSuccess(false);
 
+    const payload = {
+      ...form,
+      starterAgreementAccepted: form.type === "launch_support" ? agreementChecked : false,
+      starterAgreementVersion: form.type === "launch_support" ? STARTER_AGREEMENT_VERSION : ""
+    };
+
     const response = await fetch("/api/submissions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form)
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json().catch(() => ({ error: "Submission failed" }));
@@ -82,8 +98,19 @@ export default function SubmitPage() {
 
     const resetType = form.type;
     setForm({ ...defaultState, type: resetType });
+    setAgreementChecked(false);
+    setShowAgreementModal(false);
     setSuccess(true);
     setSubmitting(false);
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (form.type === "launch_support" && !agreementChecked) {
+      setShowAgreementModal(true);
+      return;
+    }
+    await submitApplication();
   }
 
   async function generateBioWithAi() {
@@ -162,7 +189,12 @@ export default function SubmitPage() {
           <div className="grid gap-2 md:grid-cols-2">
             <select
               value={form.type}
-              onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as FormState["type"] }))}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  type: event.target.value as FormState["type"]
+                }))
+              }
               className="w-full rounded-lg border border-slate-300 px-3 py-2"
             >
               <option value="normal_listing">{t.typeNormal}</option>
@@ -178,6 +210,14 @@ export default function SubmitPage() {
               <option value="no">{t.releasedNo}</option>
             </select>
           </div>
+
+          {form.type === "launch_support" ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              {lang === "ms"
+                ? "Starter Support Agreement wajib disahkan sebelum penghantaran akhir."
+                : "Starter Support Agreement confirmation is required before final submission."}
+            </div>
+          ) : null}
 
           <input
             value={form.contact_whatsapp}
@@ -277,6 +317,70 @@ export default function SubmitPage() {
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           {success ? <p className="text-sm text-brand-700">{t.success}</p> : null}
         </form>
+
+        {showAgreementModal ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+              <div className="border-b border-slate-700 px-5 py-4">
+                <h2 className="text-xl font-bold text-slate-100">{STARTER_AGREEMENT_TITLE}</h2>
+                <p className="text-xs text-slate-400">{STARTER_AGREEMENT_VERSION}</p>
+              </div>
+              <div className="max-h-[55vh] space-y-3 overflow-y-auto px-5 py-4">
+                {STARTER_AGREEMENT_PARAGRAPHS.map((paragraph) => (
+                  <p key={paragraph} className="text-sm leading-6 text-slate-200">
+                    {paragraph}
+                  </p>
+                ))}
+                <a
+                  href="/api/contracts/starter-support-agreement"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex rounded-lg border border-brand-400/60 px-3 py-2 text-sm font-semibold text-brand-200 hover:border-brand-300 hover:text-brand-100"
+                >
+                  {lang === "ms" ? "Muat turun PDF kontrak" : "Download contract PDF"}
+                </a>
+              </div>
+              <div className="space-y-3 border-t border-slate-700 px-5 py-4">
+                <label className="flex items-start gap-2 text-sm text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={agreementChecked}
+                    onChange={(event) => setAgreementChecked(event.target.checked)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span>
+                    {lang === "ms"
+                      ? "Saya telah membaca dan bersetuju dengan Starter Support Agreement"
+                      : "I have read and agree to the Starter Support Agreement"}
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAgreementModal(false)}
+                    className="rounded-lg border border-slate-500 px-3 py-2 text-sm font-semibold text-slate-200"
+                  >
+                    {lang === "ms" ? "Kembali" : "Back"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!agreementChecked || submitting}
+                    onClick={submitApplication}
+                    className="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting
+                      ? lang === "ms"
+                        ? "Memproses..."
+                        : "Processing..."
+                      : lang === "ms"
+                        ? "Teruskan ke pengesahan"
+                        : "Continue to confirmation"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

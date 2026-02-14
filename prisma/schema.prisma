@@ -49,6 +49,8 @@ model Artist {
   genres          String
   bio             String
   aiSummary       String?
+  starterAgreementAcceptedAt DateTime?
+  starterAgreementVersion String?
   topTrackUrl     String?
   spotifyUrl      String?
   appleMusicUrl   String?

@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
       genres: data.genres,
       bio: data.bio,
       aiSummary: cleanOptional(data.aiSummary),
+      starterAgreementAcceptedAt:
+        data.type === "launch_support" && data.starterAgreementAccepted ? new Date() : null,
+      starterAgreementVersion:
+        data.type === "launch_support" ? data.starterAgreementVersion?.trim() || null : null,
       topTrackUrl: cleanOptional(data.topTrackUrl),
       spotifyUrl: cleanOptional(data.spotifyUrl),
       appleMusicUrl: cleanOptional(data.appleMusicUrl),

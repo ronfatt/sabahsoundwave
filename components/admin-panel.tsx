@@ -19,6 +19,8 @@ type ArtistItem = {
   genres: string;
   bio: string;
   aiSummary: string | null;
+  starterAgreementAcceptedAt: string | null;
+  starterAgreementVersion: string | null;
   topTrackUrl: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
@@ -153,7 +155,28 @@ export function AdminPanel({
     editArtist: lang === "ms" ? "Edit artis" : "Edit artist",
     closeEditor: lang === "ms" ? "Tutup editor" : "Close editor",
     noArtistsMatch: lang === "ms" ? "Tiada artis sepadan dengan penapis." : "No artists match current filters."
+    ,
+    agreementRecords: lang === "ms" ? "Rekod Starter Agreement" : "Starter Agreement Records",
+    acceptedAt: lang === "ms" ? "Diterima pada" : "Accepted at",
+    version: lang === "ms" ? "Versi" : "Version",
+    agreementPending: lang === "ms" ? "Perjanjian belum disahkan" : "Agreement not accepted yet"
   };
+
+  function formatDateTime(value: string) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString(lang === "ms" ? "ms-MY" : "en-MY", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
+
+  const starterAgreementRecords = [...artists]
+    .filter((artist) => artist.type === "LAUNCH_SUPPORT" && artist.starterAgreementAcceptedAt)
+    .sort((a, b) => new Date(b.starterAgreementAcceptedAt || 0).getTime() - new Date(a.starterAgreementAcceptedAt || 0).getTime());
 
   function typeLabel(type: ArtistItem["type"]) {
     if (type === "NORMAL_LISTING") return lang === "ms" ? "SENARAI_BIASA" : "NORMAL_LISTING";
@@ -611,6 +634,15 @@ export function AdminPanel({
                       <article key={item.id} className="space-y-1 rounded-lg bg-slate-50 p-2">
                         <p className="text-sm font-medium">{item.name}</p>
                         <p className="text-xs text-slate-600">{getDistrictLabel(item.district)} · {item.genres}</p>
+                        {item.type === "LAUNCH_SUPPORT" ? (
+                          <p className="text-xs text-slate-600">
+                            {item.starterAgreementAcceptedAt
+                              ? `${t.acceptedAt}: ${formatDateTime(item.starterAgreementAcceptedAt)}${
+                                  item.starterAgreementVersion ? ` · ${t.version}: ${item.starterAgreementVersion}` : ""
+                                }`
+                              : t.agreementPending}
+                          </p>
+                        ) : null}
                         {aiInsights[item.id] ? (
                           <div className="rounded border border-brand-200 bg-brand-50 p-2 text-xs text-slate-700">
                             <p className="font-semibold">
@@ -653,6 +685,27 @@ export function AdminPanel({
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 className="text-xl font-semibold">{t.agreementRecords}</h2>
+        {starterAgreementRecords.length === 0 ? (
+          <p className="text-sm text-slate-500">{t.noItems}</p>
+        ) : (
+          <div className="grid gap-2">
+            {starterAgreementRecords.map((artist) => (
+              <div key={artist.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                <p className="font-semibold text-slate-900">{artist.name}</p>
+                <p className="text-slate-600">
+                  {t.acceptedAt}: {formatDateTime(artist.starterAgreementAcceptedAt || "")}
+                </p>
+                <p className="text-slate-600">
+                  {t.version}: {artist.starterAgreementVersion || "-"}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">

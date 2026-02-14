@@ -78,13 +78,14 @@ export async function POST(request: NextRequest) {
         "Prepare short-form teaser assets in advance."
       ];
       let roadmap = [
-        "Week 1: finalize positioning, bio, and release metadata.",
-        "Week 2: prep teaser content and outreach list.",
-        "Week 3: release push plus creator/community reposts."
+        "Finalize positioning, bio, and release metadata.",
+        "Prepare teaser content and district outreach list.",
+        "Run release push with creator and community reposts.",
+        "Review metrics and optimize next campaign cycle."
       ];
 
       try {
-        const prompt = `Assess launch readiness for a Sabah music release.\nReturn strict JSON with this exact shape:\n{"score":0-100,"strengths":["...","...","..."],"improvements":["...","...","..."],"roadmap":["...","...","..."]}\nRules: score 0-100 integer, exactly 3 items per array, each item max 16 words, practical and specific, no emojis.\nInput:\n${payload.input}`;
+        const prompt = `Assess launch readiness for a Sabah music release.\nReturn strict JSON with this exact shape:\n{"score":0-100,"strengths":["...","...","..."],"improvements":["...","...","..."],"roadmap":["...","...","...","..."]}\nRules: score 0-100 integer; strengths exactly 3 items; improvements exactly 3 items; roadmap exactly 4 items for week-by-week action; each item max 16 words; practical and specific; no emojis.\nInput:\n${payload.input}`;
         const ai = await runOpenAIJson(prompt) as LaunchResult;
         if (typeof ai.score === "number") {
           score = Math.max(0, Math.min(100, Math.round(ai.score)));
@@ -99,8 +100,8 @@ export async function POST(request: NextRequest) {
           if (cleaned.length === 3) improvements = cleaned;
         }
         if (Array.isArray(ai.roadmap)) {
-          const cleaned = ai.roadmap.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 3);
-          if (cleaned.length === 3) roadmap = cleaned;
+          const cleaned = ai.roadmap.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 4);
+          if (cleaned.length === 4) roadmap = cleaned;
         }
       } catch {
         // keep fallback readiness output

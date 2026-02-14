@@ -43,11 +43,29 @@ export const submissionSchema = z.object({
   genres: z.string().trim().min(2).max(120),
   bio: z.string().trim().min(20).max(1200),
   aiSummary: z.string().trim().max(220).optional().or(z.literal("")),
+  starterAgreementAccepted: z.boolean().optional(),
+  starterAgreementVersion: z.string().trim().max(80).optional().or(z.literal("")),
   topTrackUrl: optionalUrl,
   spotifyUrl: optionalUrl,
   appleMusicUrl: optionalUrl,
   youtubeUrl: optionalUrl,
   coverImageUrl: optionalUrl
+}).superRefine((data, ctx) => {
+  if (data.type !== "launch_support") return;
+  if (!data.starterAgreementAccepted) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["starterAgreementAccepted"],
+      message: "Starter Support Agreement must be accepted"
+    });
+  }
+  if (!data.starterAgreementVersion?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["starterAgreementVersion"],
+      message: "Starter agreement version is required"
+    });
+  }
 });
 
 export const artistUpdateSchema = z.object({
