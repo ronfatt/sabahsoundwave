@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Footer } from "@/components/footer";
 
 const siteTitle = "Sabah Soundwave – The Official Home of Sabah Original Music";
 const siteDescription =
@@ -59,7 +60,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        {children}
+        <div className="min-h-screen">
+          {children}
+          <Footer />
+        </div>
       </body>
     </html>
   );
