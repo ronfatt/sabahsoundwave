@@ -16,6 +16,7 @@ export function Navbar() {
 
   const links = [
     { href: "/", label: lang === "ms" ? "Utama" : "Home" },
+    { href: "/about", label: "About" },
     { href: "/artists", label: lang === "ms" ? "Artis" : "Artists" },
     { href: "/launch-support", label: "Launch Support" },
     { href: "/submit", label: lang === "ms" ? "Hantar Muzik" : "Submit Music" },
