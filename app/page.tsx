@@ -3,6 +3,7 @@ import { ArtistCard } from "@/components/artist-card";
 import { AiSoundFinder } from "@/components/ai-sound-finder";
 import { FilterBar } from "@/components/filter-bar";
 import { HeroBackground } from "@/components/hero-background";
+import { HeroHeadline } from "@/components/hero-headline";
 import { Navbar } from "@/components/navbar";
 import { DISTRICT_OPTIONS } from "@/lib/constants";
 import { getDistrictLabel, parseDistrict } from "@/lib/district";
@@ -157,7 +158,7 @@ export default async function Home({
           <HeroBackground />
           <div className="relative space-y-5">
             <p className="text-sm uppercase tracking-[0.18em] text-brand-200">{t.tag}</p>
-            <h1 className="headline-shine-once max-w-4xl text-4xl font-extrabold leading-[1.02] tracking-tight md:text-6xl">{t.title}</h1>
+            <HeroHeadline text={t.title} />
             <p className="max-w-2xl text-base font-semibold text-brand-100 md:text-lg">{t.subtitle}</p>
             <p className="max-w-2xl text-base text-slate-200 md:text-lg">{t.desc}</p>
             <div className="flex flex-wrap gap-3">
