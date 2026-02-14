@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       genres: data.genres,
       bio: data.bio,
       aiSummary: cleanOptional(data.aiSummary),
+      submitTermsAcceptedAt: data.submitTermsAccepted ? new Date() : null,
       starterAgreementAcceptedAt:
         data.type === "launch_support" && data.starterAgreementAccepted ? new Date() : null,
       starterAgreementVersion:

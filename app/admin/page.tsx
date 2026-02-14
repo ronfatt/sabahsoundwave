@@ -20,6 +20,7 @@ type ArtistItem = {
   genres: string;
   bio: string;
   aiSummary: string | null;
+  submitTermsAcceptedAt: string | null;
   starterAgreementAcceptedAt: string | null;
   starterAgreementVersion: string | null;
   topTrackUrl: string | null;

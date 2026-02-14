@@ -19,6 +19,7 @@ type ArtistItem = {
   genres: string;
   bio: string;
   aiSummary: string | null;
+  submitTermsAcceptedAt: string | null;
   starterAgreementAcceptedAt: string | null;
   starterAgreementVersion: string | null;
   topTrackUrl: string | null;
@@ -159,7 +160,8 @@ export function AdminPanel({
     agreementRecords: lang === "ms" ? "Rekod Starter Agreement" : "Starter Agreement Records",
     acceptedAt: lang === "ms" ? "Diterima pada" : "Accepted at",
     version: lang === "ms" ? "Versi" : "Version",
-    agreementPending: lang === "ms" ? "Perjanjian belum disahkan" : "Agreement not accepted yet"
+    agreementPending: lang === "ms" ? "Perjanjian belum disahkan" : "Agreement not accepted yet",
+    submitTermsRecords: lang === "ms" ? "Rekod Submit Music Terms" : "Submit Music Terms Records"
   };
 
   function formatDateTime(value: string) {
@@ -177,6 +179,9 @@ export function AdminPanel({
   const starterAgreementRecords = [...artists]
     .filter((artist) => artist.type === "LAUNCH_SUPPORT" && artist.starterAgreementAcceptedAt)
     .sort((a, b) => new Date(b.starterAgreementAcceptedAt || 0).getTime() - new Date(a.starterAgreementAcceptedAt || 0).getTime());
+  const submitTermsRecords = [...artists]
+    .filter((artist) => artist.submitTermsAcceptedAt)
+    .sort((a, b) => new Date(b.submitTermsAcceptedAt || 0).getTime() - new Date(a.submitTermsAcceptedAt || 0).getTime());
 
   function typeLabel(type: ArtistItem["type"]) {
     if (type === "NORMAL_LISTING") return lang === "ms" ? "SENARAI_BIASA" : "NORMAL_LISTING";
@@ -634,6 +639,11 @@ export function AdminPanel({
                       <article key={item.id} className="space-y-1 rounded-lg bg-slate-50 p-2">
                         <p className="text-sm font-medium">{item.name}</p>
                         <p className="text-xs text-slate-600">{getDistrictLabel(item.district)} · {item.genres}</p>
+                        <p className="text-xs text-slate-600">
+                          {item.submitTermsAcceptedAt
+                            ? `Submit Music Terms: ${formatDateTime(item.submitTermsAcceptedAt)}`
+                            : "Submit Music Terms: not accepted"}
+                        </p>
                         {item.type === "LAUNCH_SUPPORT" ? (
                           <p className="text-xs text-slate-600">
                             {item.starterAgreementAcceptedAt
@@ -701,6 +711,24 @@ export function AdminPanel({
                 </p>
                 <p className="text-slate-600">
                   {t.version}: {artist.starterAgreementVersion || "-"}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 className="text-xl font-semibold">{t.submitTermsRecords}</h2>
+        {submitTermsRecords.length === 0 ? (
+          <p className="text-sm text-slate-500">{t.noItems}</p>
+        ) : (
+          <div className="grid gap-2">
+            {submitTermsRecords.map((artist) => (
+              <div key={artist.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                <p className="font-semibold text-slate-900">{artist.name}</p>
+                <p className="text-slate-600">
+                  {t.acceptedAt}: {formatDateTime(artist.submitTermsAcceptedAt || "")}
                 </p>
               </div>
             ))}

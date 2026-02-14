@@ -43,6 +43,7 @@ export const submissionSchema = z.object({
   genres: z.string().trim().min(2).max(120),
   bio: z.string().trim().min(20).max(1200),
   aiSummary: z.string().trim().max(220).optional().or(z.literal("")),
+  submitTermsAccepted: z.boolean(),
   starterAgreementAccepted: z.boolean().optional(),
   starterAgreementVersion: z.string().trim().max(80).optional().or(z.literal("")),
   topTrackUrl: optionalUrl,
@@ -51,6 +52,13 @@ export const submissionSchema = z.object({
   youtubeUrl: optionalUrl,
   coverImageUrl: optionalUrl
 }).superRefine((data, ctx) => {
+  if (!data.submitTermsAccepted) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["submitTermsAccepted"],
+      message: "Submit Music Terms must be accepted"
+    });
+  }
   if (data.type !== "launch_support") return;
   if (!data.starterAgreementAccepted) {
     ctx.addIssue({

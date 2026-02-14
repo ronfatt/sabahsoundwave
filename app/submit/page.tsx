@@ -8,6 +8,7 @@ import {
   STARTER_AGREEMENT_TITLE,
   STARTER_AGREEMENT_VERSION
 } from "@/lib/starter-agreement";
+import { SUBMIT_MUSIC_TERMS, SUBMIT_MUSIC_TERMS_TITLE } from "@/lib/submit-music-terms";
 import { FormEvent, useEffect, useState } from "react";
 
 const fields = ["topTrackUrl", "spotifyUrl", "appleMusicUrl", "youtubeUrl", "coverImageUrl"] as const;
@@ -29,6 +30,7 @@ type FormState = {
   coverImageUrl: string;
   starterAgreementAccepted: boolean;
   starterAgreementVersion: string;
+  submitTermsAccepted: boolean;
 };
 
 const defaultState: FormState = {
@@ -47,7 +49,8 @@ const defaultState: FormState = {
   youtubeUrl: "",
   coverImageUrl: "",
   starterAgreementAccepted: false,
-  starterAgreementVersion: STARTER_AGREEMENT_VERSION
+  starterAgreementVersion: STARTER_AGREEMENT_VERSION,
+  submitTermsAccepted: false
 };
 
 export default function SubmitPage() {
@@ -78,6 +81,7 @@ export default function SubmitPage() {
 
     const payload = {
       ...form,
+      submitTermsAccepted: form.submitTermsAccepted,
       starterAgreementAccepted: form.type === "launch_support" ? agreementChecked : false,
       starterAgreementVersion: form.type === "launch_support" ? STARTER_AGREEMENT_VERSION : ""
     };
@@ -106,6 +110,14 @@ export default function SubmitPage() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    if (!form.submitTermsAccepted) {
+      setError(
+        lang === "ms"
+          ? "Sila setuju dengan Submit Music Terms sebelum hantar."
+          : "Please agree to the Submit Music Terms before submitting."
+      );
+      return;
+    }
     if (form.type === "launch_support" && !agreementChecked) {
       setShowAgreementModal(true);
       return;
@@ -173,7 +185,11 @@ export default function SubmitPage() {
     aiHint: lang === "ms" ? "AI akan hasilkan draf, anda boleh edit semula." : "AI will generate a draft that you can edit.",
     submitIdle: lang === "ms" ? "Hantar untuk semakan" : "Submit for review",
     submitLoading: lang === "ms" ? "Menghantar..." : "Submitting...",
-    success: lang === "ms" ? "Hantaran diterima. Profil anda kini menunggu kelulusan admin." : "Submission received. Your profile is now pending admin approval."
+    success: lang === "ms" ? "Hantaran diterima. Profil anda kini menunggu kelulusan admin." : "Submission received. Your profile is now pending admin approval.",
+    submitTermsAgree:
+      lang === "ms"
+        ? "Saya setuju dengan Submit Music Terms."
+        : "I agree to the Submit Music Terms."
   };
 
   return (
@@ -309,6 +325,33 @@ export default function SubmitPage() {
             placeholder={t.aiSummary}
             className="w-full rounded-lg border border-slate-300 px-3 py-2"
           />
+
+          <details className="rounded-lg border border-slate-300 bg-slate-50 p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+              {SUBMIT_MUSIC_TERMS_TITLE}
+            </summary>
+            <div className="mt-3 space-y-3 text-sm text-slate-700">
+              {SUBMIT_MUSIC_TERMS.map((item) => (
+                <div key={item.heading}>
+                  <p className="font-semibold">{item.heading}</p>
+                  <p>{item.body}</p>
+                </div>
+              ))}
+            </div>
+          </details>
+
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={form.submitTermsAccepted}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, submitTermsAccepted: event.target.checked }))
+              }
+              className="mt-1 h-4 w-4"
+              required
+            />
+            <span>{t.submitTermsAgree}</span>
+          </label>
 
           <button disabled={submitting} className="rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700 disabled:opacity-70">
             {submitting ? t.submitLoading : t.submitIdle}
