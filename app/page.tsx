@@ -26,6 +26,7 @@ export default async function Home({
   };
 
   let featured: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
+  let hasManualFeatured = false;
   let latest: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
   let districtCounts: Array<{ district: string; _count: { district: number } }> = [];
   let nextDropEvent: {
@@ -35,6 +36,7 @@ export default async function Home({
     description: string;
     artists: Array<{ name: string }>;
   } | null = null;
+  let upcomingDropCount = 0;
   let dailyCandidates: Array<{
     id: string;
     name: string;
@@ -45,7 +47,7 @@ export default async function Home({
   }> = [];
 
   try {
-    const [f, l, d, n, c] = await Promise.all([
+    const [f, l, d, n, c, dropCount] = await Promise.all([
       prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
       prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
       prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
@@ -58,13 +60,16 @@ export default async function Home({
         where: { status: "APPROVED" },
         select: { id: true, name: true, slug: true, district: true, genres: true, bio: true },
         orderBy: { name: "asc" }
-      })
+      }),
+      prisma.dropEvent.count({ where: { date: { gte: new Date() } } })
     ]);
-    featured = f;
+    hasManualFeatured = f.length > 0;
+    featured = hasManualFeatured ? f : l.slice(0, 4);
     latest = l;
     districtCounts = d;
     nextDropEvent = n;
     dailyCandidates = c;
+    upcomingDropCount = dropCount;
   } catch (error) {
     console.error("Home page data fetch failed:", error);
   }
@@ -92,12 +97,18 @@ export default async function Home({
     artistsCount: lang === "ms" ? "artis" : "artists",
     whyJoin: lang === "ms" ? "Kenapa Sertai" : "Why Join",
     featured: lang === "ms" ? "Spotlight Artis Pilihan" : "Featured Spotlight",
-    featuredEmpty: lang === "ms" ? "Tiada artis pilihan untuk penapis ini." : "No featured artists for this filter yet.",
+    featuredEmpty: lang === "ms" ? "Tiada artis untuk penapis ini." : "No artists for this filter yet.",
+    featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
     latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter.",
     dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
     dailyReasonLabel: lang === "ms" ? "Kenapa hari ini?" : "Why today?"
   };
+  const stats = [
+    { label: lang === "ms" ? "Artis Diluluskan" : "Approved Artists", value: dailyCandidates.length },
+    { label: lang === "ms" ? "Daerah Aktif" : "Active Districts", value: districtCounts.length },
+    { label: lang === "ms" ? "Drop Akan Datang" : "Upcoming Drops", value: upcomingDropCount }
+  ];
 
   const todayKey = new Date().toISOString().slice(0, 10);
   const dailyPick =
@@ -120,6 +131,9 @@ export default async function Home({
       dailyPickReason = `Blends ${dailyPick.genres.toLowerCase()} with ${getDistrictLabel(dailyPick.district)} atmosphere for immersive Sabah listening sessions.`;
     }
   }
+  const msToDrop = nextDropEvent ? new Date(nextDropEvent.date).getTime() - Date.now() : 0;
+  const countdownDays = Math.max(Math.floor(msToDrop / (1000 * 60 * 60 * 24)), 0);
+  const countdownHours = Math.max(Math.floor((msToDrop % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)), 0);
 
   const whyJoin =
     lang === "ms"
@@ -139,11 +153,12 @@ export default async function Home({
       <Navbar />
       <section className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10 md:px-6">
         <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-night-900 via-night-800 to-night-700 px-6 py-12 text-white md:px-8 md:py-16">
-          <div className="pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-brand-500/20 blur-3xl" />
-          <div className="pointer-events-none absolute -right-24 bottom-0 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl" />
+          <div className="hero-glow-flow pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-brand-500/20 blur-3xl" />
+          <div className="hero-glow-flow pointer-events-none absolute -right-24 bottom-0 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl [animation-delay:1.5s]" />
+          <div className="hero-glow-flow pointer-events-none absolute left-1/3 top-1/3 h-40 w-40 rounded-full bg-emerald-300/10 blur-3xl [animation-delay:0.8s]" />
           <div className="relative space-y-5">
             <p className="text-sm uppercase tracking-[0.18em] text-brand-200">{t.tag}</p>
-            <h1 className="max-w-4xl text-4xl font-extrabold leading-[1.02] tracking-tight md:text-6xl">{t.title}</h1>
+            <h1 className="headline-shine max-w-4xl text-4xl font-extrabold leading-[1.02] tracking-tight md:text-6xl">{t.title}</h1>
             <p className="max-w-2xl text-base font-semibold text-brand-100 md:text-lg">{t.subtitle}</p>
             <p className="max-w-2xl text-base text-slate-200 md:text-lg">{t.desc}</p>
             <div className="flex flex-wrap gap-3">
@@ -159,6 +174,14 @@ export default async function Home({
             </div>
           </div>
         </div>
+        <section className="grid gap-3 sm:grid-cols-3">
+          {stats.map((item) => (
+            <article key={item.label} className="rounded-xl border border-slate-700 bg-slate-900/65 p-4 shadow-[0_12px_24px_rgba(0,0,0,0.3)]">
+              <p className="text-xs uppercase tracking-wide text-brand-300">{item.label}</p>
+              <p className="mt-1 text-3xl font-bold text-slate-100">{item.value}</p>
+            </article>
+          ))}
+        </section>
 
         <AiSoundFinder lang={lang} />
 
@@ -194,6 +217,10 @@ export default async function Home({
               {t.nextDrop}
             </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-100">{nextDropEvent.title}</h2>
+            <p className="mt-1 inline-flex items-center gap-2 rounded-full border border-brand-500/35 bg-brand-500/10 px-2 py-1 text-xs text-brand-200">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-brand-300" />
+              {lang === "ms" ? `${countdownDays} hari ${countdownHours} jam lagi` : `${countdownDays}d ${countdownHours}h to go`}
+            </p>
             <p className="mt-1 text-sm text-slate-300">
               {new Date(nextDropEvent.date).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
                 weekday: "long",
@@ -221,6 +248,10 @@ export default async function Home({
               </span>
               Drop Day
             </p>
+            <p className="mt-1 inline-flex items-center gap-2 text-xs text-brand-200">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-brand-300" />
+              {lang === "ms" ? "Aktiviti semakan lineup sedang berjalan" : "Lineup activity is in progress"}
+            </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-100">{t.comingSoon}</h2>
             <p className="mt-1 text-sm text-slate-300">{t.comingSoonDesc}</p>
           </section>
@@ -228,7 +259,18 @@ export default async function Home({
 
         <section className="space-y-4 rounded-2xl border border-brand-500/30 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.14),transparent_40%),linear-gradient(180deg,#060b15_0%,#0b1120_100%)] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
           <h2 className="text-3xl font-bold text-white">{t.featured}</h2>
-          {featured.length === 0 ? <p className="text-slate-300">{t.featuredEmpty}</p> : null}
+          {!hasManualFeatured && featured.length > 0 ? <p className="text-xs text-brand-200">{t.featuredFallback}</p> : null}
+          {featured.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-brand-500/40 bg-slate-900/50 p-6 text-center">
+              <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-500/15 text-brand-200">
+                ♪
+              </div>
+              <p className="text-slate-300">{t.featuredEmpty}</p>
+              <Link href={withLang("/artists", lang)} className="mt-3 inline-flex rounded-lg border border-brand-400/50 px-3 py-2 text-sm font-semibold text-brand-200 hover:border-brand-300">
+                {lang === "ms" ? "Lihat semua artis" : "View all artists"}
+              </Link>
+            </div>
+          ) : null}
           <div className="grid gap-5 md:grid-cols-2">
             {featured.map((artist) => (
               <ArtistCard
@@ -266,10 +308,10 @@ export default async function Home({
               <Link
                 key={item.value}
                 href={withLang(`/artists?district=${item.value}`, lang)}
-                className={`rounded-xl border px-3 py-3 text-center shadow-sm transition duration-200 hover:scale-[1.02] hover:shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${
+                className={`rounded-xl border px-3 py-3 text-center shadow-sm transition duration-200 hover:scale-[1.02] hover:shadow-[0_10px_24px_rgba(0,0,0,0.35),0_0_22px_rgba(0,245,160,0.18)] ${
                   district === item.value
                     ? "border-brand-400 bg-slate-900/90 shadow-[inset_0_0_18px_rgba(0,245,160,0.18)]"
-                    : "border-slate-700 bg-slate-900/70 hover:border-brand-400 hover:shadow-[inset_0_0_12px_rgba(0,245,160,0.12)]"
+                    : "border-slate-700 bg-slate-900/70 hover:border-brand-400 hover:shadow-[inset_0_0_12px_rgba(0,245,160,0.12),0_0_20px_rgba(0,245,160,0.16)]"
                 }`}
               >
                 <p className="text-[10px] uppercase tracking-widest text-brand-300">~</p>

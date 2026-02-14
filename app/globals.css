@@ -37,3 +37,47 @@ body::before {
   box-shadow: 0 0 24px rgba(0, 245, 160, 0.35), 0 14px 30px rgba(0, 0, 0, 0.35);
   transform: translateY(-1px);
 }
+
+@keyframes heroFlow {
+  0% { transform: translateX(-8%) translateY(0%); opacity: 0.18; }
+  50% { transform: translateX(6%) translateY(-3%); opacity: 0.28; }
+  100% { transform: translateX(-8%) translateY(0%); opacity: 0.18; }
+}
+
+@keyframes titleShine {
+  0% { background-position: 120% 0; }
+  100% { background-position: -20% 0; }
+}
+
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-glow-flow {
+  animation: heroFlow 8s ease-in-out infinite;
+}
+
+.headline-shine {
+  background-image: linear-gradient(110deg, #e2e8f0 20%, #ffffff 40%, #9ca3af 60%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: titleShine 4.8s linear infinite;
+}
+
+.result-reveal {
+  opacity: 0;
+  animation: revealUp 0.45s ease-out forwards;
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-2xl border border-slate-700/80 bg-slate-900/60 shadow-[0_22px_44px_rgba(0,0,0,0.45)] backdrop-blur;
+  }
+
+  .input-neon {
+    @apply rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/50;
+  }
+}
