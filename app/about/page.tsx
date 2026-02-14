@@ -13,7 +13,7 @@ export default function AboutPage() {
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
           <div
             className="relative h-52 w-full bg-cover bg-center md:h-72"
-            style={{ backgroundImage: "url('/about/about-vision-16x9.jpg')" }}
+            style={{ backgroundImage: "url('/about/about-vision-16x9.png')" }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/45 to-slate-950/80" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_45%,rgba(2,6,23,0.55)_100%)]" />
@@ -90,7 +90,7 @@ export default function AboutPage() {
             <div className="relative min-h-[260px] md:min-h-[420px]">
               <div
                 className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: "url('/about/founder-portrait-16x9.jpg')" }}
+                style={{ backgroundImage: "url('/about/founder-portrait-16x9.png')" }}
               />
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/20 via-slate-950/45 to-slate-950/90" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_52%,rgba(2,6,23,0.52)_100%)]" />
