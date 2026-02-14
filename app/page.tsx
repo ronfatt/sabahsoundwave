@@ -2,6 +2,7 @@ import { getDailyPickReason } from "@/lib/ai-assist";
 import { ArtistCard } from "@/components/artist-card";
 import { AiSoundFinder } from "@/components/ai-sound-finder";
 import { FilterBar } from "@/components/filter-bar";
+import { HeroBackground } from "@/components/hero-background";
 import { Navbar } from "@/components/navbar";
 import { DISTRICT_OPTIONS } from "@/lib/constants";
 import { getDistrictLabel, parseDistrict } from "@/lib/district";
@@ -153,12 +154,10 @@ export default async function Home({
       <Navbar />
       <section className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10 md:px-6">
         <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-night-900 via-night-800 to-night-700 px-6 py-12 text-white md:px-8 md:py-16">
-          <div className="hero-glow-flow pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-brand-500/20 blur-3xl" />
-          <div className="hero-glow-flow pointer-events-none absolute -right-24 bottom-0 h-64 w-64 rounded-full bg-brand-600/20 blur-3xl [animation-delay:1.5s]" />
-          <div className="hero-glow-flow pointer-events-none absolute left-1/3 top-1/3 h-40 w-40 rounded-full bg-emerald-300/10 blur-3xl [animation-delay:0.8s]" />
+          <HeroBackground />
           <div className="relative space-y-5">
             <p className="text-sm uppercase tracking-[0.18em] text-brand-200">{t.tag}</p>
-            <h1 className="headline-shine max-w-4xl text-4xl font-extrabold leading-[1.02] tracking-tight md:text-6xl">{t.title}</h1>
+            <h1 className="headline-shine-once max-w-4xl text-4xl font-extrabold leading-[1.02] tracking-tight md:text-6xl">{t.title}</h1>
             <p className="max-w-2xl text-base font-semibold text-brand-100 md:text-lg">{t.subtitle}</p>
             <p className="max-w-2xl text-base text-slate-200 md:text-lg">{t.desc}</p>
             <div className="flex flex-wrap gap-3">
