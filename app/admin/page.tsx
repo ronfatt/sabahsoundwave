@@ -60,10 +60,35 @@ export default function AdminPage() {
   const [lang, setLang] = useState<Lang>("en");
   const [authorized, setAuthorized] = useState(false);
   const [data, setData] = useState<AdminData | null>(null);
+  const [dashboardError, setDashboardError] = useState("");
 
   useEffect(() => {
     setLang(parseLang(new URLSearchParams(window.location.search).get("lang")));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/dashboard")
+      .then((response) => {
+        if (response.status === 401) return null;
+        if (!response.ok) throw new Error(lang === "ms" ? "Dashboard gagal dimuatkan" : "Dashboard failed to load");
+        return response.json();
+      })
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        setAuthorized(true);
+        setData(payload);
+        setDashboardError("");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setDashboardError(error instanceof Error ? error.message : "Dashboard failed to load");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
 
   useEffect(() => {
     if (!authorized) return;
@@ -71,24 +96,49 @@ export default function AdminPage() {
     let cancelled = false;
 
     async function loadDashboard() {
-      const fetchOnce = () =>
-        fetch("/api/admin/dashboard").then((response) => {
-          if (!response.ok) throw new Error(lang === "ms" ? "Tiada kebenaran" : "Unauthorized");
-          return response.json();
-        });
+      const fetchOnce = async () => {
+        const response = await fetch("/api/admin/dashboard", { credentials: "same-origin" });
+        if (response.ok) return response.json();
+
+        const payload = await response.json().catch(() => null);
+        const fallback =
+          response.status === 401 || response.status === 403
+            ? lang === "ms"
+              ? "Tiada kebenaran"
+              : "Unauthorized"
+            : lang === "ms"
+              ? "Dashboard gagal dimuatkan"
+              : "Dashboard failed to load";
+        const error = new Error(payload?.error || fallback);
+        (error as Error & { status?: number }).status = response.status;
+        throw error;
+      };
 
       try {
         const payload = await fetchOnce();
-        if (!cancelled) setData(payload);
+        if (!cancelled) {
+          setData(payload);
+          setDashboardError("");
+        }
       } catch {
         try {
           await new Promise((resolve) => setTimeout(resolve, 250));
           const payload = await fetchOnce();
-          if (!cancelled) setData(payload);
-        } catch {
           if (!cancelled) {
-            setAuthorized(false);
-            setData(null);
+            setData(payload);
+            setDashboardError("");
+          }
+        } catch (error) {
+          if (!cancelled) {
+            const message = error instanceof Error ? error.message : "Dashboard failed to load";
+            const status = typeof error === "object" && error && "status" in error ? (error as { status?: number }).status : undefined;
+            if (status === 401 || status === 403) {
+              setAuthorized(false);
+              setData(null);
+              setDashboardError("");
+            } else {
+              setDashboardError(message);
+            }
           }
         }
       }
@@ -114,6 +164,7 @@ export default function AdminPage() {
         </div>
 
         {!authorized ? <AdminAuth lang={lang} onAuthorized={() => setAuthorized(true)} /> : null}
+        {dashboardError ? <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{dashboardError}</p> : null}
         {authorized && !data ? <p>{lang === "ms" ? "Memuatkan dashboard..." : "Loading dashboard..."}</p> : null}
         {authorized && data ? (
           <AdminPanel lang={lang} initialSubmissions={data.submissions} initialArtists={data.artists} initialDropEvents={data.dropEvents} />
