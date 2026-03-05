@@ -47,9 +47,22 @@ export default async function Home({
     genres: string;
     bio: string;
   }> = [];
+  let songRecommendations: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    district: string;
+    topTrackName: string | null;
+    topTrackUrl: string | null;
+    latestReleaseName: string | null;
+    latestReleaseDate: Date | null;
+    spotifyUrl: string | null;
+    appleMusicUrl: string | null;
+    youtubeUrl: string | null;
+  }> = [];
 
   try {
-    const [f, l, d, n, c, dropCount] = await Promise.all([
+    const [f, l, d, n, c, dropCount, songs] = await Promise.all([
       prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
       prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
       prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
@@ -63,7 +76,33 @@ export default async function Home({
         select: { id: true, name: true, slug: true, district: true, genres: true, bio: true },
         orderBy: { name: "asc" }
       }),
-      prisma.dropEvent.count({ where: { date: { gte: new Date() } } })
+      prisma.dropEvent.count({ where: { date: { gte: new Date() } } }),
+      prisma.artist.findMany({
+        where: {
+          status: "APPROVED",
+          OR: [
+            { topTrackUrl: { not: null } },
+            { spotifyUrl: { not: null } },
+            { appleMusicUrl: { not: null } },
+            { youtubeUrl: { not: null } }
+          ]
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          district: true,
+          topTrackName: true,
+          topTrackUrl: true,
+          latestReleaseName: true,
+          latestReleaseDate: true,
+          spotifyUrl: true,
+          appleMusicUrl: true,
+          youtubeUrl: true
+        },
+        orderBy: [{ latestReleaseDate: "desc" }, { lastSpotifySyncedAt: "desc" }],
+        take: 12
+      })
     ]);
     hasManualFeatured = f.length > 0;
     featured = hasManualFeatured ? f : l.slice(0, 4);
@@ -72,6 +111,7 @@ export default async function Home({
     nextDropEvent = n;
     dailyCandidates = c;
     upcomingDropCount = dropCount;
+    songRecommendations = songs;
   } catch (error) {
     console.error("Home page data fetch failed:", error);
   }
@@ -102,6 +142,10 @@ export default async function Home({
     featuredEmpty: lang === "ms" ? "Tiada artis untuk penapis ini." : "No artists for this filter yet.",
     featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
+    songs: lang === "ms" ? "Cadangan Lagu" : "Song Recommendations",
+    songsEmpty: lang === "ms" ? "Cadangan lagu akan muncul selepas sync Spotify seterusnya." : "Song recommendations will appear after the next Spotify sync.",
+    listenNow: lang === "ms" ? "Dengar sekarang" : "Listen now",
+    byArtist: lang === "ms" ? "oleh" : "by",
     latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter.",
     dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
     dailyReasonLabel: lang === "ms" ? "Kenapa hari ini?" : "Why today?"
@@ -285,6 +329,42 @@ export default async function Home({
         </section>
 
         <FilterBar district={district} genre={genre} lang={lang} />
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
+          <h2 className="text-2xl font-semibold text-slate-100">{t.songs}</h2>
+          {songRecommendations.length === 0 ? <p className="text-slate-400">{t.songsEmpty}</p> : null}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {songRecommendations.map((item) => {
+              const listenUrl = item.topTrackUrl || item.spotifyUrl || item.appleMusicUrl || item.youtubeUrl;
+              const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
+              return (
+                <article key={item.id} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+                  <p className="text-sm font-semibold text-slate-100">{songTitle}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {t.byArtist} {item.name} · {getDistrictLabel(item.district)}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {listenUrl ? (
+                      <Link
+                        href={listenUrl}
+                        target="_blank"
+                        className="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-slate-950"
+                      >
+                        {t.listenNow}
+                      </Link>
+                    ) : null}
+                    <Link
+                      href={withLang(`/artists/${item.slug}`, lang)}
+                      className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200"
+                    >
+                      {lang === "ms" ? "Profil artis" : "Artist profile"}
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
           <h2 className="text-2xl font-semibold text-slate-100">{t.latest}</h2>

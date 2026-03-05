@@ -108,6 +108,21 @@ New artist metadata fields used by discovery:
 - `sabahConfidence` (0-100)
 - `sourceTags` (playlist/search trace)
 
+## Daily auto-sync (Vercel Cron)
+Daily job endpoint: `/api/cron/spotify-daily`
+
+What it does:
+1. Discover new artists (`playlist-first`, then `search fallback`)
+2. Enrich tracks/releases/followers for existing artists
+
+Required env:
+- `CRON_SECRET` (used by cron authorization)
+- `SPOTIFY_CLIENT_ID`
+- `SPOTIFY_CLIENT_SECRET`
+- `SPOTIFY_PLAYLIST_IDS`
+- `SPOTIFY_DISCOVERY_TARGET` (optional, default `220`)
+- `SPOTIFY_SYNC_DAILY_LIMIT` (optional, default `180`)
+
 ## Spotify CSV export (Node / recommended)
 Export a CSV from playlist artist seeds, including Spotify URL, genres, top song (MY), and followers.
 
