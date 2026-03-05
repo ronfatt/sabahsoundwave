@@ -62,16 +62,36 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authorized) return;
 
-    fetch("/api/admin/dashboard")
-      .then((response) => {
-        if (!response.ok) throw new Error(lang === "ms" ? "Tiada kebenaran" : "Unauthorized");
-        return response.json();
-      })
-      .then((payload) => setData(payload))
-      .catch(() => {
-        setAuthorized(false);
-        setData(null);
-      });
+    let cancelled = false;
+
+    async function loadDashboard() {
+      const fetchOnce = () =>
+        fetch("/api/admin/dashboard").then((response) => {
+          if (!response.ok) throw new Error(lang === "ms" ? "Tiada kebenaran" : "Unauthorized");
+          return response.json();
+        });
+
+      try {
+        const payload = await fetchOnce();
+        if (!cancelled) setData(payload);
+      } catch {
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 250));
+          const payload = await fetchOnce();
+          if (!cancelled) setData(payload);
+        } catch {
+          if (!cancelled) {
+            setAuthorized(false);
+            setData(null);
+          }
+        }
+      }
+    }
+
+    loadDashboard();
+    return () => {
+      cancelled = true;
+    };
   }, [authorized, lang]);
 
   return (

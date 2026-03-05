@@ -9,13 +9,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }
 
+  const host = request.headers.get("host") || "";
+  const isSabahDomain =
+    process.env.NODE_ENV === "production" &&
+    (host === "sabahsoundwave.com" ||
+      host === "www.sabahsoundwave.com" ||
+      host.endsWith(".sabahsoundwave.com"));
+
   const response = NextResponse.json({ ok: true });
   response.cookies.set("admin_token", adminPassword, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 8,
-    path: "/"
+    path: "/",
+    ...(isSabahDomain ? { domain: ".sabahsoundwave.com" } : {})
   });
 
   return response;
