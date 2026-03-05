@@ -111,8 +111,9 @@ export async function POST(request: NextRequest) {
     // keep default body
   }
 
-  const limit = Math.max(1, Math.min(200, Number(body.limit) || 80));
+  const limit = Math.max(1, Math.min(120, Number(body.limit) || 50));
   const apply = Boolean(body.apply);
+  const aiCap = Math.max(0, Math.min(30, Number((body as { aiCap?: number }).aiCap) || 18));
 
   const pending = await prisma.artist.findMany({
     where: { status: "PENDING" },
@@ -130,7 +131,8 @@ export async function POST(request: NextRequest) {
 
   const canUseAi = Boolean(process.env.OPENAI_API_KEY);
 
-  for (const item of pending) {
+  for (let index = 0; index < pending.length; index += 1) {
+    const item = pending[index];
     const hasLink = hasStrongMusicLink(item);
     let decisionResult: ResolvedDecision = fallbackDecision({
       hasSongReleased: item.hasSongReleased,
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
       hasLink
     });
 
-    if (canUseAi) {
+    if (canUseAi && index < aiCap) {
       try {
         decisionResult = await aiDecision(item);
       } catch {
@@ -191,6 +193,7 @@ export async function POST(request: NextRequest) {
     keptPending,
     apply,
     usedAi: canUseAi,
+    aiCap,
     preview: results.slice(0, 20),
     submissions,
     artists

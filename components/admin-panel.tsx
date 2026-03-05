@@ -462,13 +462,13 @@ export function AdminPanel({
     const response = await fetch("/api/admin/submissions/auto-review", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ limit: 120, apply })
+      body: JSON.stringify({ limit: 50, aiCap: 18, apply })
     });
     const payload = await response.json().catch(() => null);
     setAutoReviewLoading(false);
 
     if (!response.ok || !payload) {
-      setStatusMessage(payload?.error || t.autoReviewFailed);
+      setStatusMessage(`${t.autoReviewFailed}${payload?.error ? `: ${payload.error}` : ""}`);
       return;
     }
 
