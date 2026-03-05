@@ -60,9 +60,23 @@ export default async function Home({
     appleMusicUrl: string | null;
     youtubeUrl: string | null;
   }> = [];
+  let songsFromRecentWindow = false;
+  const recentReleaseThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   try {
-    const [f, l, d, n, c, dropCount, songs] = await Promise.all([
+    const songWhere = {
+      status: "APPROVED" as const,
+      district,
+      genres: genre ? { contains: genre } : undefined,
+      OR: [
+        { topTrackUrl: { not: null } },
+        { spotifyUrl: { not: null } },
+        { appleMusicUrl: { not: null } },
+        { youtubeUrl: { not: null } }
+      ]
+    };
+
+    const [f, l, d, n, c, dropCount, recentSongs, fallbackSongs] = await Promise.all([
       prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
       prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
       prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
@@ -78,15 +92,7 @@ export default async function Home({
       }),
       prisma.dropEvent.count({ where: { date: { gte: new Date() } } }),
       prisma.artist.findMany({
-        where: {
-          status: "APPROVED",
-          OR: [
-            { topTrackUrl: { not: null } },
-            { spotifyUrl: { not: null } },
-            { appleMusicUrl: { not: null } },
-            { youtubeUrl: { not: null } }
-          ]
-        },
+        where: { ...songWhere, latestReleaseDate: { gte: recentReleaseThreshold } },
         select: {
           id: true,
           name: true,
@@ -102,6 +108,24 @@ export default async function Home({
         },
         orderBy: [{ latestReleaseDate: "desc" }, { lastSpotifySyncedAt: "desc" }],
         take: 12
+      }),
+      prisma.artist.findMany({
+        where: songWhere,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          district: true,
+          topTrackName: true,
+          topTrackUrl: true,
+          latestReleaseName: true,
+          latestReleaseDate: true,
+          spotifyUrl: true,
+          appleMusicUrl: true,
+          youtubeUrl: true
+        },
+        orderBy: [{ lastSpotifySyncedAt: "desc" }, { updatedAt: "desc" }],
+        take: 12
       })
     ]);
     hasManualFeatured = f.length > 0;
@@ -111,7 +135,8 @@ export default async function Home({
     nextDropEvent = n;
     dailyCandidates = c;
     upcomingDropCount = dropCount;
-    songRecommendations = songs;
+    songsFromRecentWindow = recentSongs.length > 0;
+    songRecommendations = recentSongs.length > 0 ? recentSongs : fallbackSongs;
   } catch (error) {
     console.error("Home page data fetch failed:", error);
   }
@@ -143,8 +168,11 @@ export default async function Home({
     featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
     songs: lang === "ms" ? "Cadangan Lagu" : "Song Recommendations",
+    songsRecent: lang === "ms" ? "Rilisan 30 hari terakhir" : "Released in last 30 days",
+    songsFallback: lang === "ms" ? "Tiada rilisan 30 hari; paparan lagu terkini disegerak" : "No 30-day releases found; showing latest synced tracks",
     songsEmpty: lang === "ms" ? "Cadangan lagu akan muncul selepas sync Spotify seterusnya." : "Song recommendations will appear after the next Spotify sync.",
     listenNow: lang === "ms" ? "Dengar sekarang" : "Listen now",
+    releasedOn: lang === "ms" ? "Tarikh rilis" : "Released",
     byArtist: lang === "ms" ? "oleh" : "by",
     latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter.",
     dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
@@ -332,17 +360,26 @@ export default async function Home({
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
           <h2 className="text-2xl font-semibold text-slate-100">{t.songs}</h2>
+          <p className="text-xs text-brand-300">{songsFromRecentWindow ? t.songsRecent : t.songsFallback}</p>
           {songRecommendations.length === 0 ? <p className="text-slate-400">{t.songsEmpty}</p> : null}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {songRecommendations.map((item) => {
               const listenUrl = item.topTrackUrl || item.spotifyUrl || item.appleMusicUrl || item.youtubeUrl;
               const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
+              const releaseDateLabel = item.latestReleaseDate
+                ? new Date(item.latestReleaseDate).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric"
+                  })
+                : null;
               return (
                 <article key={item.id} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
                   <p className="text-sm font-semibold text-slate-100">{songTitle}</p>
                   <p className="mt-1 text-xs text-slate-400">
                     {t.byArtist} {item.name} · {getDistrictLabel(item.district)}
                   </p>
+                  {releaseDateLabel ? <p className="mt-1 text-xs text-slate-500">{t.releasedOn}: {releaseDateLabel}</p> : null}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {listenUrl ? (
                       <Link
