@@ -113,3 +113,18 @@ python3 scripts/sabah_spotify_artist_csv.py
 
 4. Output:
 - `sabah_spotify_artists_v1.csv` (default)
+
+## Import CSV back to DB (Step 3)
+Bulk import CSV rows into `Artist` table (create new + fill missing fields on existing names).
+
+```bash
+# Dry run first
+npm run spotify:import-csv -- --file=sabah_spotify_artists_v1.csv --dry-run
+
+# Import as PENDING (recommended)
+npm run spotify:import-csv -- --file=sabah_spotify_artists_v1.csv --status=PENDING --type=NORMAL_LISTING
+```
+
+After import, open `/admin` and use:
+- `AI auto-review (dry run)`
+- `AI auto-approve/reject`
