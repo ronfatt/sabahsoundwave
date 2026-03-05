@@ -18,6 +18,21 @@ enum ListingType {
   LAUNCH_SUPPORT
 }
 
+enum DiscoverySource {
+  MANUAL
+  SUBMISSION
+  PLAYLIST
+  SEARCH
+  CSV_IMPORT
+}
+
+enum VerificationStatus {
+  NEEDS_REVIEW
+  AUTO_APPROVED
+  VERIFIED
+  REJECTED
+}
+
 enum District {
   KOTA_KINABALU
   PAPAR
@@ -41,6 +56,12 @@ model Artist {
   slug            String           @unique
   status          SubmissionStatus @default(PENDING)
   type            ListingType      @default(NORMAL_LISTING)
+  spotifyArtistId String?          @unique
+  discoverySource DiscoverySource  @default(MANUAL)
+  verificationStatus VerificationStatus @default(NEEDS_REVIEW)
+  sabahConfidence Int              @default(0)
+  sourceTags      String?
+  discoveredAt    DateTime?
   hasSongReleased Boolean          @default(false)
   uploadLinks     String?
   contactWhatsapp String
@@ -71,6 +92,9 @@ model Artist {
   @@index([district])
   @@index([status])
   @@index([type])
+  @@index([verificationStatus])
+  @@index([discoverySource])
+  @@index([sabahConfidence])
 }
 
 model DropEvent {

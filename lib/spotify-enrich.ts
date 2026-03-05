@@ -16,6 +16,10 @@ type SpotifyArtist = {
   followers?: { total?: number };
 };
 
+type SpotifyArtistsByIdResponse = {
+  artists?: SpotifyArtist[];
+};
+
 type SpotifySearchResponse = {
   artists?: {
     items: SpotifyArtist[];
@@ -91,6 +95,16 @@ async function searchArtist(token: string, name: string) {
   return data.artists?.items ?? [];
 }
 
+async function fetchArtistsByIds(token: string, artistIds: string[]) {
+  if (artistIds.length === 0) return [];
+  const response = await fetch(`https://api.spotify.com/v1/artists?ids=${artistIds.join(",")}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok) return [];
+  const data = (await response.json()) as SpotifyArtistsByIdResponse;
+  return data.artists ?? [];
+}
+
 async function getTopTrack(token: string, artistId: string) {
   const markets = ["MY", "US", "GB"];
   for (const market of markets) {
@@ -134,6 +148,19 @@ async function getLatestRelease(token: string, artistId: string) {
   };
 }
 
+function computeConfidence(input: {
+  previousConfidence: number | null;
+  genres: string[];
+  popularity?: number;
+  sourceTags?: string | null;
+}) {
+  const seed = Math.max(0, input.previousConfidence ?? 0);
+  const genreBoost = input.genres.some((g) => /(sabah|kadazan|dusun|borneo)/i.test(g)) ? 8 : 0;
+  const popularityBoost = typeof input.popularity === "number" ? Math.min(8, Math.floor(input.popularity / 12)) : 0;
+  const playlistBoost = input.sourceTags?.includes("playlist:") ? 8 : 0;
+  return Math.max(seed, Math.min(98, 58 + genreBoost + popularityBoost + playlistBoost));
+}
+
 export async function enrichSpotifyArtists(options?: {
   limit?: number;
   pendingOnly?: boolean;
@@ -157,6 +184,7 @@ export async function enrichSpotifyArtists(options?: {
     select: {
       id: true,
       name: true,
+      spotifyArtistId: true,
       spotifyUrl: true,
       coverImageUrl: true,
       topTrackUrl: true,
@@ -165,17 +193,39 @@ export async function enrichSpotifyArtists(options?: {
       latestReleaseName: true,
       latestReleaseDate: true,
       latestReleaseUrl: true,
-      genres: true
+      genres: true,
+      sabahConfidence: true,
+      sourceTags: true,
+      discoverySource: true,
+      verificationStatus: true
     }
   });
 
+  const spotifyIds = artists.map((artist) => artist.spotifyArtistId).filter((id): id is string => Boolean(id));
+  const spotifyById = new Map<string, SpotifyArtist>();
+  for (let i = 0; i < spotifyIds.length; i += 50) {
+    const chunk = spotifyIds.slice(i, i + 50);
+    const items = await fetchArtistsByIds(token.access_token, chunk);
+    for (const item of items) spotifyById.set(item.id, item);
+  }
+
   let matched = 0;
   let updated = 0;
+  let byIdMatches = 0;
+  let byNameMatches = 0;
   const noMatch: string[] = [];
 
   for (const artist of artists) {
-    const results = await searchArtist(token.access_token, artist.name);
-    const best = pickBestMatch(artist.name, results);
+    let best = artist.spotifyArtistId ? spotifyById.get(artist.spotifyArtistId) ?? null : null;
+
+    if (best) {
+      byIdMatches += 1;
+    } else {
+      const results = await searchArtist(token.access_token, artist.name);
+      best = pickBestMatch(artist.name, results);
+      if (best) byNameMatches += 1;
+    }
+
     if (!best) {
       noMatch.push(artist.name);
       continue;
@@ -188,11 +238,19 @@ export async function enrichSpotifyArtists(options?: {
       artist.genres && artist.genres.trim().length > 0
         ? artist.genres
         : best.genres?.slice(0, 3).join(", ");
+    const sourceTags = artist.sourceTags || (artist.discoverySource === "PLAYLIST" ? "playlist:sync" : "search:sync");
+    const confidence = computeConfidence({
+      previousConfidence: artist.sabahConfidence,
+      genres: best.genres ?? [],
+      popularity: best.popularity,
+      sourceTags
+    });
 
     if (!dryRun) {
       await prisma.artist.update({
         where: { id: artist.id },
         data: {
+          spotifyArtistId: artist.spotifyArtistId || best.id,
           spotifyUrl: best.external_urls?.spotify ?? artist.spotifyUrl ?? undefined,
           coverImageUrl: best.images?.[0]?.url ?? artist.coverImageUrl ?? undefined,
           topTrackUrl: topTrack.url ?? artist.topTrackUrl ?? undefined,
@@ -205,6 +263,9 @@ export async function enrichSpotifyArtists(options?: {
               ? best.followers.total
               : artist.spotifyFollowers ?? undefined,
           genres: nextGenres ?? artist.genres,
+          sabahConfidence: confidence,
+          sourceTags,
+          verificationStatus: confidence >= 88 ? "AUTO_APPROVED" : artist.verificationStatus,
           lastSpotifySyncedAt: new Date()
         }
       });
@@ -215,6 +276,8 @@ export async function enrichSpotifyArtists(options?: {
   return {
     scanned: artists.length,
     matched,
+    byIdMatches,
+    byNameMatches,
     updated: dryRun ? 0 : updated,
     dryRun,
     noMatchCount: noMatch.length,

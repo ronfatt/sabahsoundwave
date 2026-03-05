@@ -12,6 +12,12 @@ type ArtistItem = {
   slug: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   type: "NORMAL_LISTING" | "LAUNCH_SUPPORT";
+  spotifyArtistId: string | null;
+  discoverySource: "MANUAL" | "SUBMISSION" | "PLAYLIST" | "SEARCH" | "CSV_IMPORT";
+  verificationStatus: "NEEDS_REVIEW" | "AUTO_APPROVED" | "VERIFIED" | "REJECTED";
+  sabahConfidence: number;
+  sourceTags: string | null;
+  discoveredAt: string | null;
   hasSongReleased: boolean;
   uploadLinks: string | null;
   contactWhatsapp: string;

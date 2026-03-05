@@ -90,6 +90,24 @@ npm run spotify:seed-playlists
 npm run spotify:seed-playlists -- --playlists=playlistId1,playlistId2
 ```
 
+## Spotify discovery pipeline (playlist-first + search fallback)
+Discover 200+ candidates with dedupe by `spotifyArtistId`, plus Sabah confidence + verification flags.
+
+```bash
+# dry run
+npm run spotify:discover -- --target=220 --dry-run
+
+# write to DB
+npm run spotify:discover -- --target=220
+```
+
+New artist metadata fields used by discovery:
+- `spotifyArtistId` (unique dedupe key)
+- `discoverySource` (`PLAYLIST` / `SEARCH` / etc.)
+- `verificationStatus` (`NEEDS_REVIEW` / `AUTO_APPROVED` / ...)
+- `sabahConfidence` (0-100)
+- `sourceTags` (playlist/search trace)
+
 ## Spotify CSV export (Node / recommended)
 Export a CSV from playlist artist seeds, including Spotify URL, genres, top song (MY), and followers.
 

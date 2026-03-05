@@ -1,4 +1,4 @@
-import { District } from "@prisma/client";
+import { DiscoverySource, District, VerificationStatus } from "@prisma/client";
 import { createUniqueSlug } from "../lib/slug";
 import { prisma } from "../lib/prisma";
 
@@ -14,8 +14,6 @@ type PlaylistResponse = {
 type PlaylistTracksResponse = {
   items: Array<{
     track: {
-      id: string;
-      name: string;
       artists: Array<{
         id: string;
         name: string;
@@ -43,6 +41,7 @@ type SeedArtist = {
   sourcePlaylists: Set<string>;
   genres: string[];
   coverImageUrl?: string;
+  popularity?: number;
 };
 
 const DEFAULT_DISTRICT: District = "KOTA_KINABALU";
@@ -93,7 +92,7 @@ async function fetchPlaylist(token: string, playlistId: string) {
 
 async function fetchAllPlaylistTracks(token: string, playlistId: string) {
   const tracks: PlaylistTracksResponse["items"] = [];
-  let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(id,name,artists(id,name,external_urls))),next`;
+  let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100&fields=items(track(artists(id,name,external_urls))),next`;
 
   while (nextUrl) {
     const response = await fetch(nextUrl, { headers: { Authorization: `Bearer ${token}` } });
@@ -121,6 +120,22 @@ async function fetchArtistsBatch(token: string, artistIds: string[]) {
 function fallbackBio(name: string, sourcePlaylists: string[]) {
   const from = sourcePlaylists.slice(0, 2).join(", ");
   return `${name} was discovered from Sabah-focused Spotify playlists (${from}). This profile is pending Sabah editorial verification and metadata refinement.`;
+}
+
+function toConfidence(input: {
+  sourcePlaylistsCount: number;
+  genres: string[];
+  popularity?: number;
+}) {
+  const playlistBoost = Math.min(30, input.sourcePlaylistsCount * 10);
+  const genreHit = input.genres.some((genre) => /(sabah|kadazan|dusun|borneo)/i.test(genre)) ? 10 : 0;
+  const popularityBoost = typeof input.popularity === "number" ? Math.min(10, Math.floor(input.popularity / 10)) : 0;
+  return Math.max(55, Math.min(97, 55 + playlistBoost + genreHit + popularityBoost));
+}
+
+function toVerificationStatus(confidence: number): VerificationStatus {
+  if (confidence >= 85) return "AUTO_APPROVED";
+  return "NEEDS_REVIEW";
 }
 
 async function main() {
@@ -153,13 +168,12 @@ async function main() {
 
       for (const artist of track.artists) {
         if (!artist.id || !artist.name) continue;
-        const key = artist.id;
-        const existing = artistMap.get(key);
+        const existing = artistMap.get(artist.id);
         if (existing) {
           existing.sourcePlaylists.add(playlist.name);
           continue;
         }
-        artistMap.set(key, {
+        artistMap.set(artist.id, {
           spotifyArtistId: artist.id,
           name: artist.name,
           spotifyUrl: artist.external_urls?.spotify,
@@ -186,6 +200,7 @@ async function main() {
     if (!detail) continue;
     artist.genres = detail.genres ?? [];
     artist.coverImageUrl = detail.images?.[0]?.url;
+    artist.popularity = detail.popularity;
     if (!artist.spotifyUrl && detail.external_urls?.spotify) {
       artist.spotifyUrl = detail.external_urls.spotify;
     }
@@ -200,10 +215,14 @@ async function main() {
       genres: true,
       bio: true,
       spotifyUrl: true,
-      coverImageUrl: true
+      coverImageUrl: true,
+      spotifyArtistId: true,
+      sabahConfidence: true,
+      sourceTags: true
     }
   });
 
+  const bySpotifyId = new Map(existing.filter((item) => item.spotifyArtistId).map((item) => [item.spotifyArtistId as string, item]));
   const byName = new Map(existing.map((item) => [normalizeName(item.name), item]));
   const slugSet = new Set(existing.map((item) => item.slug));
 
@@ -214,19 +233,36 @@ async function main() {
   for (const item of allArtists) {
     const sourcePlaylists = [...item.sourcePlaylists].sort();
     const genres = item.genres.length > 0 ? item.genres.slice(0, 3).join(", ") : "Sabah Playlist Discovery";
-    const existingArtist = byName.get(normalizeName(item.name));
+    const confidence = toConfidence({
+      sourcePlaylistsCount: sourcePlaylists.length,
+      genres: item.genres,
+      popularity: item.popularity
+    });
+    const verificationStatus = toVerificationStatus(confidence);
+    const sourceTags = sourcePlaylists.join(" | ").slice(0, 1000);
+
+    const existingArtist = bySpotifyId.get(item.spotifyArtistId) ?? byName.get(normalizeName(item.name));
 
     if (existingArtist) {
       const nextData = {
+        spotifyArtistId: existingArtist.spotifyArtistId || item.spotifyArtistId,
         genres: existingArtist.genres?.trim() ? existingArtist.genres : genres,
         spotifyUrl: existingArtist.spotifyUrl?.trim() ? existingArtist.spotifyUrl : item.spotifyUrl,
-        coverImageUrl: existingArtist.coverImageUrl?.trim() ? existingArtist.coverImageUrl : item.coverImageUrl
+        coverImageUrl: existingArtist.coverImageUrl?.trim() ? existingArtist.coverImageUrl : item.coverImageUrl,
+        discoverySource: "PLAYLIST" as DiscoverySource,
+        verificationStatus,
+        sabahConfidence: Math.max(existingArtist.sabahConfidence ?? 0, confidence),
+        sourceTags,
+        discoveredAt: new Date()
       };
 
       const changed =
+        nextData.spotifyArtistId !== existingArtist.spotifyArtistId ||
         nextData.genres !== existingArtist.genres ||
         nextData.spotifyUrl !== existingArtist.spotifyUrl ||
-        nextData.coverImageUrl !== existingArtist.coverImageUrl;
+        nextData.coverImageUrl !== existingArtist.coverImageUrl ||
+        nextData.sabahConfidence !== existingArtist.sabahConfidence ||
+        nextData.sourceTags !== existingArtist.sourceTags;
 
       if (changed && !dryRun) {
         await prisma.artist.update({ where: { id: existingArtist.id }, data: nextData });
@@ -246,6 +282,12 @@ async function main() {
           slug,
           status: "PENDING",
           type: "NORMAL_LISTING",
+          spotifyArtistId: item.spotifyArtistId,
+          discoverySource: "PLAYLIST",
+          verificationStatus,
+          sabahConfidence: confidence,
+          sourceTags,
+          discoveredAt: new Date(),
           hasSongReleased: true,
           contactWhatsapp: "+601100000000",
           name: item.name,

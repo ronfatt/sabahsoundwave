@@ -226,7 +226,12 @@ async function main() {
             ? existingArtist.spotifyFollowers
             : Number.isFinite(spotifyFollowers)
               ? spotifyFollowers
-              : null
+              : null,
+        discoverySource: "CSV_IMPORT" as const,
+        verificationStatus: "NEEDS_REVIEW" as const,
+        sabahConfidence: 72,
+        sourceTags: "csv:spotify_export",
+        discoveredAt: new Date()
       };
 
       const changed =
@@ -258,6 +263,11 @@ async function main() {
           slug,
           status: createStatus,
           type: listingType,
+          discoverySource: "CSV_IMPORT",
+          verificationStatus: "NEEDS_REVIEW",
+          sabahConfidence: 72,
+          sourceTags: "csv:spotify_export",
+          discoveredAt: new Date(),
           hasSongReleased: Boolean(topTrackUrl || spotifyUrl),
           contactWhatsapp: "+601100000000",
           name,

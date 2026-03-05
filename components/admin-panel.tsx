@@ -11,6 +11,12 @@ type ArtistItem = {
   slug: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   type: "NORMAL_LISTING" | "LAUNCH_SUPPORT";
+  spotifyArtistId: string | null;
+  discoverySource: "MANUAL" | "SUBMISSION" | "PLAYLIST" | "SEARCH" | "CSV_IMPORT";
+  verificationStatus: "NEEDS_REVIEW" | "AUTO_APPROVED" | "VERIFIED" | "REJECTED";
+  sabahConfidence: number;
+  sourceTags: string | null;
+  discoveredAt: string | null;
   hasSongReleased: boolean;
   uploadLinks: string | null;
   contactWhatsapp: string;
@@ -87,6 +93,9 @@ export function AdminPanel({
   const [artistTypeFilter, setArtistTypeFilter] = useState<ArtistItem["type"] | "ALL">("ALL");
   const [artistDistrictFilter, setArtistDistrictFilter] = useState<DistrictValue | "ALL">("ALL");
   const [artistFeaturedFilter, setArtistFeaturedFilter] = useState<"ALL" | "FEATURED" | "NON_FEATURED">("ALL");
+  const [artistSourceFilter, setArtistSourceFilter] = useState<ArtistItem["discoverySource"] | "ALL">("ALL");
+  const [artistVerificationFilter, setArtistVerificationFilter] = useState<ArtistItem["verificationStatus"] | "ALL">("ALL");
+  const [artistConfidenceBand, setArtistConfidenceBand] = useState<"ALL" | "LOW" | "MEDIUM" | "HIGH">("ALL");
   const [artistPage, setArtistPage] = useState(1);
   const [editingArtistId, setEditingArtistId] = useState<string | null>(null);
   const [editingDropId, setEditingDropId] = useState<string | null>(null);
@@ -165,6 +174,12 @@ export function AdminPanel({
     all: lang === "ms" ? "Semua" : "All",
     featuredOnly: lang === "ms" ? "Featured sahaja" : "Featured only",
     nonFeaturedOnly: lang === "ms" ? "Bukan featured" : "Non-featured only",
+    filterSource: lang === "ms" ? "Sumber" : "Source",
+    filterVerification: lang === "ms" ? "Pengesahan" : "Verification",
+    filterConfidence: lang === "ms" ? "Keyakinan Sabah" : "Sabah confidence",
+    confidenceLow: lang === "ms" ? "Rendah (<60)" : "Low (<60)",
+    confidenceMedium: lang === "ms" ? "Sederhana (60-84)" : "Medium (60-84)",
+    confidenceHigh: lang === "ms" ? "Tinggi (85+)" : "High (85+)",
     artistsFound: lang === "ms" ? "artis ditemui" : "artists found",
     page: lang === "ms" ? "Halaman" : "Page",
     prev: lang === "ms" ? "Sebelum" : "Previous",
@@ -214,6 +229,25 @@ export function AdminPanel({
     if (value === "FEATURED") return t.featuredOnly;
     if (value === "NON_FEATURED") return t.nonFeaturedOnly;
     return t.all;
+  }
+
+  function sourceLabel(value: ArtistItem["discoverySource"]) {
+    if (value === "CSV_IMPORT") return "CSV Import";
+    const map: Record<ArtistItem["discoverySource"], string> = {
+      MANUAL: lang === "ms" ? "Manual" : "Manual",
+      SUBMISSION: lang === "ms" ? "Hantaran" : "Submission",
+      PLAYLIST: "Playlist",
+      SEARCH: "Search",
+      CSV_IMPORT: "CSV Import"
+    };
+    return map[value];
+  }
+
+  function verificationLabel(value: ArtistItem["verificationStatus"]) {
+    if (value === "NEEDS_REVIEW") return lang === "ms" ? "Perlu Semakan" : "Needs Review";
+    if (value === "AUTO_APPROVED") return lang === "ms" ? "Auto Lulus" : "Auto Approved";
+    if (value === "VERIFIED") return lang === "ms" ? "Disahkan" : "Verified";
+    return lang === "ms" ? "Ditolak" : "Rejected";
   }
 
   async function moderateSubmission(id: string, action: "approve" | "reject") {
@@ -269,6 +303,11 @@ export function AdminPanel({
     const body = {
       type: textValue("type"),
       hasSongReleased: textValue("hasSongReleased") === "yes",
+      spotifyArtistId: textValue("spotifyArtistId"),
+      discoverySource: textValue("discoverySource"),
+      verificationStatus: textValue("verificationStatus"),
+      sabahConfidence: textValue("sabahConfidence") ? Number(textValue("sabahConfidence")) : undefined,
+      sourceTags: textValue("sourceTags"),
       uploadLinks: textValue("uploadLinks"),
       contactWhatsapp: textValue("contactWhatsapp"),
       name: textValue("name"),
@@ -539,10 +578,18 @@ export function AdminPanel({
         artistFeaturedFilter === "ALL" ||
         (artistFeaturedFilter === "FEATURED" && artist.featured) ||
         (artistFeaturedFilter === "NON_FEATURED" && !artist.featured);
+      const sourceMatch = artistSourceFilter === "ALL" || artist.discoverySource === artistSourceFilter;
+      const verificationMatch =
+        artistVerificationFilter === "ALL" || artist.verificationStatus === artistVerificationFilter;
+      const confidenceMatch =
+        artistConfidenceBand === "ALL" ||
+        (artistConfidenceBand === "LOW" && artist.sabahConfidence < 60) ||
+        (artistConfidenceBand === "MEDIUM" && artist.sabahConfidence >= 60 && artist.sabahConfidence < 85) ||
+        (artistConfidenceBand === "HIGH" && artist.sabahConfidence >= 85);
 
-      return queryMatch && statusMatch && typeMatch && districtMatch && featuredMatch;
+      return queryMatch && statusMatch && typeMatch && districtMatch && featuredMatch && sourceMatch && verificationMatch && confidenceMatch;
     });
-  }, [artists, artistQuery, artistStatusFilter, artistTypeFilter, artistDistrictFilter, artistFeaturedFilter]);
+  }, [artists, artistQuery, artistStatusFilter, artistTypeFilter, artistDistrictFilter, artistFeaturedFilter, artistSourceFilter, artistVerificationFilter, artistConfidenceBand]);
 
   const totalArtistPages = Math.max(1, Math.ceil(filteredArtists.length / ARTISTS_PER_PAGE));
   const currentArtistPage = Math.min(artistPage, totalArtistPages);
@@ -550,7 +597,7 @@ export function AdminPanel({
 
   useEffect(() => {
     setArtistPage(1);
-  }, [artistQuery, artistStatusFilter, artistTypeFilter, artistDistrictFilter, artistFeaturedFilter]);
+  }, [artistQuery, artistStatusFilter, artistTypeFilter, artistDistrictFilter, artistFeaturedFilter, artistSourceFilter, artistVerificationFilter, artistConfidenceBand]);
 
   return (
     <section className="space-y-8">
@@ -900,7 +947,41 @@ export function AdminPanel({
               </option>
             ))}
           </select>
-          <div className="flex items-center justify-end text-xs text-slate-600 md:col-span-3">
+          <select
+            value={artistSourceFilter}
+            onChange={(event) => setArtistSourceFilter(event.target.value as ArtistItem["discoverySource"] | "ALL")}
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="ALL">{t.filterSource}: {t.all}</option>
+            {(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT"] as const).map((source) => (
+              <option key={source} value={source}>
+                {t.filterSource}: {sourceLabel(source)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={artistVerificationFilter}
+            onChange={(event) => setArtistVerificationFilter(event.target.value as ArtistItem["verificationStatus"] | "ALL")}
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="ALL">{t.filterVerification}: {t.all}</option>
+            {(["NEEDS_REVIEW", "AUTO_APPROVED", "VERIFIED", "REJECTED"] as const).map((status) => (
+              <option key={status} value={status}>
+                {t.filterVerification}: {verificationLabel(status)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={artistConfidenceBand}
+            onChange={(event) => setArtistConfidenceBand(event.target.value as "ALL" | "LOW" | "MEDIUM" | "HIGH")}
+            className="rounded border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="ALL">{t.filterConfidence}: {t.all}</option>
+            <option value="LOW">{t.filterConfidence}: {t.confidenceLow}</option>
+            <option value="MEDIUM">{t.filterConfidence}: {t.confidenceMedium}</option>
+            <option value="HIGH">{t.filterConfidence}: {t.confidenceHigh}</option>
+          </select>
+          <div className="flex items-center justify-end text-xs text-slate-600 md:col-span-2">
             {filteredArtists.length} {t.artistsFound}
           </div>
         </div>
@@ -915,6 +996,12 @@ export function AdminPanel({
                   <p className="text-xs text-slate-500">
                     /{artist.slug} · {getDistrictLabel(artist.district)} · {artist.genres}
                   </p>
+                  <div className="flex flex-wrap gap-1 text-[11px]">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">{sourceLabel(artist.discoverySource)}</span>
+                    <span className="rounded-full bg-brand-100 px-2 py-0.5 text-brand-700">{verificationLabel(artist.verificationStatus)}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">Confidence {artist.sabahConfidence}</span>
+                    {artist.spotifyArtistId ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">Spotify ID linked</span> : null}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">{statusLabel(artist.status)}</span>
@@ -943,6 +1030,41 @@ export function AdminPanel({
                       <option value="yes">{lang === "ms" ? "Ada lagu sudah rilis" : "has_song_released: yes"}</option>
                       <option value="no">{lang === "ms" ? "Belum rilis lagu" : "has_song_released: no"}</option>
                     </select>
+                    <input
+                      name="spotifyArtistId"
+                      defaultValue={artist.spotifyArtistId || ""}
+                      placeholder="Spotify artist ID"
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <select name="discoverySource" defaultValue={artist.discoverySource} className="rounded border border-slate-300 px-3 py-2 text-sm">
+                      {(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT"] as const).map((source) => (
+                        <option key={source} value={source}>
+                          {sourceLabel(source)}
+                        </option>
+                      ))}
+                    </select>
+                    <select name="verificationStatus" defaultValue={artist.verificationStatus} className="rounded border border-slate-300 px-3 py-2 text-sm">
+                      {(["NEEDS_REVIEW", "AUTO_APPROVED", "VERIFIED", "REJECTED"] as const).map((status) => (
+                        <option key={status} value={status}>
+                          {verificationLabel(status)}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      name="sabahConfidence"
+                      defaultValue={artist.sabahConfidence}
+                      placeholder="Sabah confidence"
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="sourceTags"
+                      defaultValue={artist.sourceTags || ""}
+                      placeholder="Source tags (playlist/search)"
+                      className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+                    />
                     <input
                       name="contactWhatsapp"
                       defaultValue={artist.contactWhatsapp}

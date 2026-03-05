@@ -45,6 +45,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     data: {
       slug,
       type: data.type,
+      spotifyArtistId: cleanOptional(data.spotifyArtistId),
+      discoverySource: data.discoverySource,
+      verificationStatus: data.verificationStatus,
+      sabahConfidence: Number.isFinite(data.sabahConfidence) ? data.sabahConfidence : undefined,
+      sourceTags: cleanOptional(data.sourceTags),
       hasSongReleased: data.hasSongReleased,
       uploadLinks: cleanOptional(data.uploadLinks),
       contactWhatsapp: data.contactWhatsapp.trim(),
