@@ -137,3 +137,7 @@ Then refresh artist Spotify metadata:
 ```bash
 npm run spotify:enrich -- --limit=120
 ```
+
+Or in `/admin`, use:
+- `Sync Spotify now` (all visible artists)
+- `Sync pending only` (faster)

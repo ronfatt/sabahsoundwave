@@ -81,6 +81,7 @@ export function AdminPanel({
   const [aiInsights, setAiInsights] = useState<Record<string, SubmissionAiInsight>>({});
   const [aiLoadingIds, setAiLoadingIds] = useState<string[]>([]);
   const [autoReviewLoading, setAutoReviewLoading] = useState(false);
+  const [spotifySyncLoading, setSpotifySyncLoading] = useState(false);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistStatusFilter, setArtistStatusFilter] = useState<ArtistItem["status"] | "ALL">("ALL");
   const [artistTypeFilter, setArtistTypeFilter] = useState<ArtistItem["type"] | "ALL">("ALL");
@@ -126,6 +127,10 @@ export function AdminPanel({
     autoReviewApply: lang === "ms" ? "AI auto lulus/tolak" : "AI auto-approve/reject",
     autoReviewRunning: lang === "ms" ? "AI sedang semak..." : "AI reviewing...",
     autoReviewFailed: lang === "ms" ? "AI auto semak gagal" : "AI auto-review failed",
+    spotifySync: lang === "ms" ? "Sync Spotify now" : "Sync Spotify now",
+    spotifySyncPending: lang === "ms" ? "Sync pending only" : "Sync pending only",
+    spotifySyncRunning: lang === "ms" ? "Spotify sedang sync..." : "Spotify syncing...",
+    spotifySyncFailed: lang === "ms" ? "Sync Spotify gagal" : "Spotify sync failed",
     dropDayManager: "Drop Day Manager",
     dropTitle: lang === "ms" ? "Tajuk Drop" : "Drop title",
     dropDescription: lang === "ms" ? "Penerangan Drop" : "Drop description",
@@ -493,6 +498,32 @@ export function AdminPanel({
     );
   }
 
+  async function runSpotifySync(pendingOnly: boolean) {
+    setSpotifySyncLoading(true);
+    const response = await fetch("/api/admin/spotify/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 80, pendingOnly, dryRun: false })
+    });
+    const payload = await response.json().catch(() => null);
+    setSpotifySyncLoading(false);
+
+    if (!response.ok || !payload) {
+      setStatusMessage(`${t.spotifySyncFailed}${payload?.error ? `: ${payload.error}` : ""}`);
+      return;
+    }
+
+    const dashboard = await fetch("/api/admin/dashboard").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (dashboard?.artists && dashboard?.submissions) {
+      setArtists(dashboard.artists);
+      setSubmissions(dashboard.submissions);
+    }
+
+    setStatusMessage(
+      `Spotify sync: scanned ${payload.scanned}, matched ${payload.matched}, updated ${payload.updated}, noMatch ${payload.noMatchCount}`
+    );
+  }
+
   const filteredArtists = useMemo(() => {
     const query = artistQuery.trim().toLowerCase();
     return artists.filter((artist) => {
@@ -667,6 +698,22 @@ export function AdminPanel({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xl font-semibold">{t.grouped}</h2>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => runSpotifySync(false)}
+              disabled={spotifySyncLoading}
+              className="rounded border border-brand-500/40 px-3 py-2 text-xs font-semibold text-brand-700 disabled:opacity-50"
+            >
+              {spotifySyncLoading ? t.spotifySyncRunning : t.spotifySync}
+            </button>
+            <button
+              type="button"
+              onClick={() => runSpotifySync(true)}
+              disabled={spotifySyncLoading}
+              className="rounded border border-brand-500/40 px-3 py-2 text-xs font-semibold text-brand-700 disabled:opacity-50"
+            >
+              {spotifySyncLoading ? t.spotifySyncRunning : t.spotifySyncPending}
+            </button>
             <button
               type="button"
               onClick={() => runAutoReview(false)}
