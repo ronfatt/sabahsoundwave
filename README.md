@@ -90,28 +90,24 @@ npm run spotify:seed-playlists
 npm run spotify:seed-playlists -- --playlists=playlistId1,playlistId2
 ```
 
-## Spotify CSV export (Python / optional)
+## Spotify CSV export (Node / recommended)
 Export a CSV from playlist artist seeds, including Spotify URL, genres, top song (MY), and followers.
 
-1. Install Python dependency:
+1. Set env:
 ```bash
-pip install spotipy
-```
-
-2. Set env:
-```bash
-export SPOTIPY_CLIENT_ID="your_client_id"
-export SPOTIPY_CLIENT_SECRET="your_client_secret"
+export SPOTIFY_CLIENT_ID="your_client_id"
+export SPOTIFY_CLIENT_SECRET="your_client_secret"
 # optional override
 export SPOTIFY_PLAYLIST_IDS="6suhLOSv1aTHZNzQ0JsCLk,247G4TJ3ueJmlz0NFjk48J,5kUQjSQG6IHvkzTbt0QcRS,6GeeBELId545dGVdlIpJpV,37i9dQZF1E4Ef9jlDv5pC8"
+export SPOTIFY_EXPORT_CSV="sabah_spotify_artists_v1.csv"
 ```
 
-3. Run:
+2. Run:
 ```bash
-python3 scripts/sabah_spotify_artist_csv.py
+npm run spotify:export-csv
 ```
 
-4. Output:
+3. Output:
 - `sabah_spotify_artists_v1.csv` (default)
 
 ## Import CSV back to DB (Step 3)
