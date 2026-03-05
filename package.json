@@ -10,7 +10,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "spotify:enrich": "tsx prisma/enrich-spotify-artists.ts"
+    "spotify:enrich": "tsx prisma/enrich-spotify-artists.ts",
+    "spotify:seed-playlists": "tsx prisma/import-from-spotify-playlists.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.3.1",

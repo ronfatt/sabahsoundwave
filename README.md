@@ -57,6 +57,7 @@ Open [http://localhost:3000](http://localhost:3000)
 - `OPENAI_API_KEY=""`
 - `SPOTIFY_CLIENT_ID=""` (for artist auto-enrichment)
 - `SPOTIFY_CLIENT_SECRET=""` (for artist auto-enrichment)
+- `SPOTIFY_PLAYLIST_IDS=""` (comma-separated Spotify playlist IDs for bulk seeding)
 
 ## Basic validation/error handling
 - Zod validation for submit/admin payloads
@@ -74,4 +75,17 @@ npm run spotify:enrich -- --pending-only --limit=30 --dry-run
 
 # Write updates
 npm run spotify:enrich -- --pending-only --limit=30
+```
+
+## Spotify playlist seed (optional)
+Seed artists from Spotify playlists as a discovery pool (`PENDING` by default).
+
+```bash
+# Option A: set in .env
+SPOTIFY_PLAYLIST_IDS="playlistId1,playlistId2,playlistId3"
+npm run spotify:seed-playlists -- --dry-run
+npm run spotify:seed-playlists
+
+# Option B: pass IDs directly
+npm run spotify:seed-playlists -- --playlists=playlistId1,playlistId2
 ```
