@@ -4,8 +4,9 @@ export function isAdmin(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cookieToken = request.cookies.get("admin_token")?.value;
   const headerToken = authHeader?.replace("Bearer ", "").trim();
-  const token = headerToken || cookieToken;
+  const token = (headerToken || cookieToken || "").trim();
+  const adminPassword = (process.env.ADMIN_PASSWORD || "").trim();
 
-  if (!token || !process.env.ADMIN_PASSWORD) return false;
-  return token === process.env.ADMIN_PASSWORD;
+  if (!token || !adminPassword) return false;
+  return token === adminPassword;
 }

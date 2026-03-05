@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
+  const inputPassword = String(body?.password ?? "").trim();
+  const adminPassword = (process.env.ADMIN_PASSWORD || "").trim();
 
-  if (!process.env.ADMIN_PASSWORD || body.password !== process.env.ADMIN_PASSWORD) {
+  if (!adminPassword || inputPassword !== adminPassword) {
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("admin_token", process.env.ADMIN_PASSWORD, {
+  response.cookies.set("admin_token", adminPassword, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
