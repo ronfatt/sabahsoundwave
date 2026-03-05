@@ -20,10 +20,16 @@ type ArtistItem = {
   genres: string;
   bio: string;
   aiSummary: string | null;
+  spotifyFollowers: number | null;
   submitTermsAcceptedAt: string | null;
   starterAgreementAcceptedAt: string | null;
   starterAgreementVersion: string | null;
   topTrackUrl: string | null;
+  topTrackName: string | null;
+  latestReleaseName: string | null;
+  latestReleaseDate: string | null;
+  latestReleaseUrl: string | null;
+  lastSpotifySyncedAt: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
   youtubeUrl: string | null;

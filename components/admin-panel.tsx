@@ -19,10 +19,16 @@ type ArtistItem = {
   genres: string;
   bio: string;
   aiSummary: string | null;
+  spotifyFollowers: number | null;
   submitTermsAcceptedAt: string | null;
   starterAgreementAcceptedAt: string | null;
   starterAgreementVersion: string | null;
   topTrackUrl: string | null;
+  topTrackName: string | null;
+  latestReleaseName: string | null;
+  latestReleaseDate: string | null;
+  latestReleaseUrl: string | null;
+  lastSpotifySyncedAt: string | null;
   spotifyUrl: string | null;
   appleMusicUrl: string | null;
   youtubeUrl: string | null;
@@ -265,7 +271,12 @@ export function AdminPanel({
       genres: textValue("genres"),
       bio: textValue("bio"),
       aiSummary: textValue("aiSummary"),
+      spotifyFollowers: textValue("spotifyFollowers") ? Number(textValue("spotifyFollowers")) : undefined,
       topTrackUrl: textValue("topTrackUrl"),
+      topTrackName: textValue("topTrackName"),
+      latestReleaseName: textValue("latestReleaseName"),
+      latestReleaseDate: textValue("latestReleaseDate"),
+      latestReleaseUrl: textValue("latestReleaseUrl"),
       spotifyUrl: textValue("spotifyUrl"),
       appleMusicUrl: textValue("appleMusicUrl"),
       youtubeUrl: textValue("youtubeUrl"),
@@ -909,7 +920,24 @@ export function AdminPanel({
                     <input name="genres" defaultValue={artist.genres} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
                     <textarea name="bio" defaultValue={artist.bio} className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" rows={3} />
                     <input name="aiSummary" defaultValue={artist.aiSummary || ""} placeholder="AI Sound Signature" className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
+                    <input
+                      type="number"
+                      min={0}
+                      name="spotifyFollowers"
+                      defaultValue={artist.spotifyFollowers ?? ""}
+                      placeholder="Spotify followers"
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
                     <input name="topTrackUrl" defaultValue={artist.topTrackUrl || ""} placeholder="Top track URL" className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
+                    <input name="topTrackName" defaultValue={artist.topTrackName || ""} placeholder="Top track name" className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
+                    <input name="latestReleaseName" defaultValue={artist.latestReleaseName || ""} placeholder="Latest release name" className="rounded border border-slate-300 px-3 py-2 text-sm md:col-span-2" />
+                    <input
+                      type="date"
+                      name="latestReleaseDate"
+                      defaultValue={artist.latestReleaseDate ? artist.latestReleaseDate.slice(0, 10) : ""}
+                      className="rounded border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <input name="latestReleaseUrl" defaultValue={artist.latestReleaseUrl || ""} placeholder="Latest release URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
                     <input name="spotifyUrl" defaultValue={artist.spotifyUrl || ""} placeholder="Spotify URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
                     <input name="appleMusicUrl" defaultValue={artist.appleMusicUrl || ""} placeholder="Apple Music URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />
                     <input name="youtubeUrl" defaultValue={artist.youtubeUrl || ""} placeholder="YouTube URL" className="rounded border border-slate-300 px-3 py-2 text-sm" />

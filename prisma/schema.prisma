@@ -52,7 +52,13 @@ model Artist {
   submitTermsAcceptedAt DateTime?
   starterAgreementAcceptedAt DateTime?
   starterAgreementVersion String?
+  spotifyFollowers Int?
   topTrackUrl     String?
+  topTrackName    String?
+  latestReleaseName String?
+  latestReleaseDate DateTime?
+  latestReleaseUrl String?
+  lastSpotifySyncedAt DateTime?
   spotifyUrl      String?
   appleMusicUrl   String?
   youtubeUrl      String?

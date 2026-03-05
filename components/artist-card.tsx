@@ -9,11 +9,16 @@ type ArtistCardProps = {
   genres: string | null;
   bio: string | null;
   aiSummary?: string | null;
+  spotifyFollowers?: number | null;
   coverImageUrl: string | null;
   spotifyUrl?: string | null;
   youtubeUrl?: string | null;
   appleMusicUrl?: string | null;
   topTrackUrl?: string | null;
+  topTrackName?: string | null;
+  latestReleaseName?: string | null;
+  latestReleaseDate?: string | Date | null;
+  latestReleaseUrl?: string | null;
   featured?: boolean;
   variant?: "default" | "featured";
   lang?: Lang;
@@ -48,11 +53,16 @@ export function ArtistCard({
   genres,
   bio,
   aiSummary,
+  spotifyFollowers,
   coverImageUrl,
   spotifyUrl,
   youtubeUrl,
   appleMusicUrl,
   topTrackUrl,
+  topTrackName,
+  latestReleaseName,
+  latestReleaseDate,
+  latestReleaseUrl,
   featured,
   variant = "default",
   lang = "en"
@@ -61,6 +71,7 @@ export function ArtistCard({
   const safeSpotifyUrl = toSafeExternalUrl(spotifyUrl);
   const safeYoutubeUrl = toSafeExternalUrl(youtubeUrl);
   const safeAppleMusicUrl = toSafeExternalUrl(appleMusicUrl);
+  const safeLatestReleaseUrl = toSafeExternalUrl(latestReleaseUrl);
   const listenUrl = toSafeExternalUrl(topTrackUrl) || safeSpotifyUrl || safeYoutubeUrl || safeAppleMusicUrl;
   const safeGenres = typeof genres === "string" ? genres : "";
   const safeBio = typeof bio === "string" && bio.trim().length > 0 ? bio : lang === "ms" ? "Bio akan dikemas kini." : "Bio will be updated.";
@@ -74,6 +85,15 @@ export function ArtistCard({
     .filter(Boolean);
   const shownTags = tokens.slice(0, 2);
   const extraCount = Math.max(tokens.length - shownTags.length, 0);
+
+  const followersLabel =
+    typeof spotifyFollowers === "number" && Number.isFinite(spotifyFollowers)
+      ? new Intl.NumberFormat("en-MY").format(spotifyFollowers)
+      : null;
+  const releaseDateLabel =
+    latestReleaseDate && !Number.isNaN(new Date(latestReleaseDate).getTime())
+      ? new Date(latestReleaseDate).toLocaleDateString("en-MY", { year: "numeric", month: "short", day: "numeric" })
+      : null;
 
   return (
     <article
@@ -134,6 +154,18 @@ export function ArtistCard({
         ) : null}
 
         <p className="line-clamp-2 text-sm text-slate-300">{safeBio}</p>
+        {topTrackName || latestReleaseName || followersLabel ? (
+          <div className="space-y-1 text-xs text-slate-400">
+            {topTrackName ? <p>{lang === "ms" ? "Lagu popular" : "Top song"}: {topTrackName}</p> : null}
+            {latestReleaseName ? (
+              <p>
+                {lang === "ms" ? "Keluaran terbaru" : "Latest release"}: {latestReleaseName}
+                {releaseDateLabel ? ` · ${releaseDateLabel}` : ""}
+              </p>
+            ) : null}
+            {followersLabel ? <p>Spotify followers: {followersLabel}</p> : null}
+          </div>
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           {listenUrl ? (
@@ -152,6 +184,16 @@ export function ArtistCard({
           >
             {lang === "ms" ? "Lihat profil" : "View Profile"}
           </Link>
+          {safeLatestReleaseUrl ? (
+            <a
+              href={safeLatestReleaseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-lg border border-slate-500/70 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-brand-300 hover:text-brand-200"
+            >
+              {lang === "ms" ? "Latest Release" : "Latest Release"}
+            </a>
+          ) : null}
         </div>
       </div>
     </article>

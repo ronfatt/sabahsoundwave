@@ -10,6 +10,9 @@ type CsvRow = {
   followers?: string;
   top_song?: string;
   top_song_url?: string;
+  latest_release?: string;
+  latest_release_date?: string;
+  latest_release_url?: string;
   genres?: string;
   monthly_listeners?: string;
   language?: string;
@@ -167,6 +170,11 @@ async function main() {
       bio: true,
       spotifyUrl: true,
       topTrackUrl: true,
+      topTrackName: true,
+      spotifyFollowers: true,
+      latestReleaseName: true,
+      latestReleaseDate: true,
+      latestReleaseUrl: true,
       coverImageUrl: true,
       appleMusicUrl: true,
       youtubeUrl: true
@@ -193,6 +201,12 @@ async function main() {
     const bio = buildBio({ ...row, artist_name: name });
     const spotifyUrl = row.spotify_url?.trim() || undefined;
     const topTrackUrl = row.top_song_url?.trim() || undefined;
+    const topTrackName = row.top_song?.trim() || undefined;
+    const latestReleaseName = row.latest_release?.trim() || undefined;
+    const latestReleaseUrl = row.latest_release_url?.trim() || undefined;
+    const latestReleaseDateRaw = row.latest_release_date?.trim() || "";
+    const latestReleaseDate = latestReleaseDateRaw ? new Date(`${latestReleaseDateRaw}T00:00:00.000Z`) : undefined;
+    const spotifyFollowers = row.followers?.trim() ? Number(row.followers.trim()) : undefined;
 
     const existingArtist = byName.get(normalizedName);
     if (existingArtist) {
@@ -200,14 +214,31 @@ async function main() {
         genres: existingArtist.genres?.trim() ? existingArtist.genres : genres,
         bio: existingArtist.bio?.trim() ? existingArtist.bio : bio,
         spotifyUrl: existingArtist.spotifyUrl?.trim() ? existingArtist.spotifyUrl : spotifyUrl,
-        topTrackUrl: existingArtist.topTrackUrl?.trim() ? existingArtist.topTrackUrl : topTrackUrl
+        topTrackUrl: existingArtist.topTrackUrl?.trim() ? existingArtist.topTrackUrl : topTrackUrl,
+        topTrackName: existingArtist.topTrackName?.trim() ? existingArtist.topTrackName : topTrackName,
+        latestReleaseName: existingArtist.latestReleaseName?.trim() ? existingArtist.latestReleaseName : latestReleaseName,
+        latestReleaseUrl: existingArtist.latestReleaseUrl?.trim() ? existingArtist.latestReleaseUrl : latestReleaseUrl,
+        latestReleaseDate:
+          existingArtist.latestReleaseDate ??
+          (latestReleaseDate && !Number.isNaN(latestReleaseDate.getTime()) ? latestReleaseDate : null),
+        spotifyFollowers:
+          typeof existingArtist.spotifyFollowers === "number"
+            ? existingArtist.spotifyFollowers
+            : Number.isFinite(spotifyFollowers)
+              ? spotifyFollowers
+              : null
       };
 
       const changed =
         patch.genres !== existingArtist.genres ||
         patch.bio !== existingArtist.bio ||
         patch.spotifyUrl !== existingArtist.spotifyUrl ||
-        patch.topTrackUrl !== existingArtist.topTrackUrl;
+        patch.topTrackUrl !== existingArtist.topTrackUrl ||
+        patch.topTrackName !== existingArtist.topTrackName ||
+        patch.latestReleaseName !== existingArtist.latestReleaseName ||
+        patch.latestReleaseUrl !== existingArtist.latestReleaseUrl ||
+        `${patch.latestReleaseDate ?? ""}` !== `${existingArtist.latestReleaseDate ?? ""}` ||
+        patch.spotifyFollowers !== existingArtist.spotifyFollowers;
 
       if (changed && !dryRun) {
         await prisma.artist.update({ where: { id: existingArtist.id }, data: patch });
@@ -235,6 +266,12 @@ async function main() {
           bio,
           spotifyUrl,
           topTrackUrl,
+          topTrackName,
+          latestReleaseName,
+          latestReleaseUrl,
+          latestReleaseDate:
+            latestReleaseDate && !Number.isNaN(latestReleaseDate.getTime()) ? latestReleaseDate : null,
+          spotifyFollowers: Number.isFinite(spotifyFollowers) ? spotifyFollowers : null,
           featured: false
         }
       });

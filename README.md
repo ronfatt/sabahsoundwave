@@ -124,3 +124,16 @@ npm run spotify:import-csv -- --file=sabah_spotify_artists_v1.csv --status=PENDI
 After import, open `/admin` and use:
 - `AI auto-review (dry run)`
 - `AI auto-approve/reject`
+
+## Spotify metadata fields (followers, top song, latest release)
+If pulling latest code, sync DB schema first:
+
+```bash
+npx prisma db push
+```
+
+Then refresh artist Spotify metadata:
+
+```bash
+npm run spotify:enrich -- --limit=120
+```

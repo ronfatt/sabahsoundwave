@@ -28,6 +28,17 @@ function getYoutubeEmbedUrl(url?: string | null) {
   }
 }
 
+function formatReleaseDate(value?: Date | string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-MY", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+
 export default async function ArtistProfile({
   params,
   searchParams
@@ -43,6 +54,11 @@ export default async function ArtistProfile({
   if (!artist) notFound();
 
   const youtubeEmbed = getYoutubeEmbedUrl(artist.youtubeUrl);
+  const formattedReleaseDate = formatReleaseDate(artist.latestReleaseDate);
+  const followersLabel =
+    typeof artist.spotifyFollowers === "number"
+      ? new Intl.NumberFormat("en-MY").format(artist.spotifyFollowers)
+      : null;
   let aiSignature = `${artist.genres} rooted in ${getDistrictLabel(artist.district)}, blending Sabah mood with expressive local storytelling.`;
   try {
     aiSignature = await getArtistSoundSignature({
@@ -71,11 +87,38 @@ export default async function ArtistProfile({
             <h1 className="text-3xl font-bold tracking-tight">{artist.name}</h1>
             <p className="text-sm text-slate-500">{getDistrictLabel(artist.district)} · {artist.genres}</p>
             <p className="text-slate-700">{artist.bio}</p>
+            {(artist.topTrackName || artist.latestReleaseName || followersLabel) ? (
+              <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                {artist.topTrackName ? <p><span className="font-semibold">Top song:</span> {artist.topTrackName}</p> : null}
+                {artist.latestReleaseName ? (
+                  <p>
+                    <span className="font-semibold">Latest release:</span> {artist.latestReleaseName}
+                    {formattedReleaseDate ? ` · ${formattedReleaseDate}` : ""}
+                  </p>
+                ) : null}
+                {followersLabel ? <p><span className="font-semibold">Spotify followers:</span> {followersLabel}</p> : null}
+                {artist.lastSpotifySyncedAt ? (
+                  <p className="text-xs text-slate-500">
+                    Synced: {new Date(artist.lastSpotifySyncedAt).toLocaleString("en-MY")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               {artist.spotifyUrl ? (
                 <Link href={artist.spotifyUrl} target="_blank" className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">
                   {lang === "ms" ? "Buka di Spotify" : "Open on Spotify"}
+                </Link>
+              ) : null}
+              {artist.topTrackUrl ? (
+                <Link href={artist.topTrackUrl} target="_blank" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">
+                  {lang === "ms" ? "Dengar lagu popular" : "Listen top song"}
+                </Link>
+              ) : null}
+              {artist.latestReleaseUrl ? (
+                <Link href={artist.latestReleaseUrl} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
+                  {lang === "ms" ? "Buka keluaran terbaru" : "Open latest release"}
                 </Link>
               ) : null}
               {artist.appleMusicUrl ? (

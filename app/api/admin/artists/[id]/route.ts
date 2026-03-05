@@ -18,6 +18,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const data = parsed.data;
+  const latestReleaseDate =
+    data.latestReleaseDate && data.latestReleaseDate.trim()
+      ? new Date(data.latestReleaseDate)
+      : null;
+  if (latestReleaseDate && Number.isNaN(latestReleaseDate.getTime())) {
+    return NextResponse.json({ error: "Invalid latest release date" }, { status: 400 });
+  }
 
   const current = await prisma.artist.findUnique({ where: { id } });
   if (!current) {
@@ -46,11 +53,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       genres: data.genres,
       bio: data.bio,
       aiSummary: cleanOptional(data.aiSummary),
+      spotifyFollowers: Number.isFinite(data.spotifyFollowers) ? data.spotifyFollowers : null,
       topTrackUrl: cleanOptional(data.topTrackUrl),
+      topTrackName: cleanOptional(data.topTrackName),
+      latestReleaseName: cleanOptional(data.latestReleaseName),
+      latestReleaseDate,
+      latestReleaseUrl: cleanOptional(data.latestReleaseUrl),
       spotifyUrl: cleanOptional(data.spotifyUrl),
       appleMusicUrl: cleanOptional(data.appleMusicUrl),
       youtubeUrl: cleanOptional(data.youtubeUrl),
       coverImageUrl: cleanOptional(data.coverImageUrl),
+      lastSpotifySyncedAt: new Date(),
       featured: data.featured
     }
   });

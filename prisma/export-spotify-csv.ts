@@ -33,6 +33,14 @@ type TopTracksResponse = {
   }>;
 };
 
+type LatestReleaseResponse = {
+  items?: Array<{
+    name?: string;
+    release_date?: string;
+    external_urls?: { spotify?: string };
+  }>;
+};
+
 const DEFAULT_PLAYLIST_IDS = [
   "6suhLOSv1aTHZNzQ0JsCLk",
   "247G4TJ3ueJmlz0NFjk48J",
@@ -130,6 +138,23 @@ async function fetchTopTrack(token: string, artistId: string) {
   };
 }
 
+async function fetchLatestRelease(token: string, artistId: string) {
+  const response = await fetch(
+    `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=single,album&limit=1&market=MY`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!response.ok) {
+    return { name: "", releaseDate: "", url: "" };
+  }
+  const data = (await response.json()) as LatestReleaseResponse;
+  const first = data.items?.[0];
+  return {
+    name: first?.name ?? "",
+    releaseDate: first?.release_date ?? "",
+    url: first?.external_urls?.spotify ?? ""
+  };
+}
+
 async function main() {
   const clientId = process.env.SPOTIFY_CLIENT_ID || process.env.SPOTIPY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET || process.env.SPOTIPY_CLIENT_SECRET;
@@ -160,12 +185,16 @@ async function main() {
     for (const artist of artists) {
       if (!artist) continue;
       const top = await fetchTopTrack(token.access_token, artist.id);
+      const latest = await fetchLatestRelease(token.access_token, artist.id);
       rows.push({
         artist_name: artist.name || "",
         spotify_url: artist.external_urls?.spotify || "",
         followers: String(artist.followers?.total ?? ""),
         top_song: top.name,
         top_song_url: top.url,
+        latest_release: latest.name,
+        latest_release_date: latest.releaseDate,
+        latest_release_url: latest.url,
         genres: (artist.genres || []).join(", "),
         monthly_listeners: "",
         language: "",
@@ -180,6 +209,9 @@ async function main() {
     "followers",
     "top_song",
     "top_song_url",
+    "latest_release",
+    "latest_release_date",
+    "latest_release_url",
     "genres",
     "monthly_listeners",
     "language",

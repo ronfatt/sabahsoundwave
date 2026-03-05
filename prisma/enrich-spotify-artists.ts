@@ -13,6 +13,7 @@ type SpotifyArtist = {
   external_urls?: { spotify?: string };
   images?: Array<{ url: string; width: number; height: number }>;
   popularity?: number;
+  followers?: { total?: number };
 };
 
 type SpotifySearchResponse = {
@@ -25,6 +26,15 @@ type SpotifyTopTracksResponse = {
   tracks: Array<{
     id: string;
     name: string;
+    external_urls?: { spotify?: string };
+  }>;
+};
+
+type SpotifyLatestReleaseResponse = {
+  items?: Array<{
+    name?: string;
+    release_date?: string;
+    release_date_precision?: "year" | "month" | "day";
     external_urls?: { spotify?: string };
   }>;
 };
@@ -90,7 +100,7 @@ async function searchArtist(token: string, name: string) {
   return data.artists?.items ?? [];
 }
 
-async function getTopTrackUrl(token: string, artistId: string) {
+async function getTopTrack(token: string, artistId: string) {
   const markets = ["MY", "US", "GB"];
 
   for (const market of markets) {
@@ -100,11 +110,39 @@ async function getTopTrackUrl(token: string, artistId: string) {
     );
     if (!response.ok) continue;
     const data = (await response.json()) as SpotifyTopTracksResponse;
-    const link = data.tracks?.[0]?.external_urls?.spotify;
-    if (link) return link;
+    const first = data.tracks?.[0];
+    if (first?.external_urls?.spotify || first?.name) {
+      return {
+        url: first?.external_urls?.spotify,
+        name: first?.name
+      };
+    }
   }
 
-  return undefined;
+  return { url: undefined, name: undefined };
+}
+
+function toReleaseDate(value?: string, precision?: "year" | "month" | "day") {
+  if (!value) return undefined;
+  if (precision === "year") return new Date(`${value}-01-01T00:00:00.000Z`);
+  if (precision === "month") return new Date(`${value}-01T00:00:00.000Z`);
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+async function getLatestRelease(token: string, artistId: string) {
+  const response = await fetch(
+    `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=single,album&limit=1&market=MY`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!response.ok) return { name: undefined, date: undefined, url: undefined };
+  const data = (await response.json()) as SpotifyLatestReleaseResponse;
+  const first = data.items?.[0];
+  const date = toReleaseDate(first?.release_date, first?.release_date_precision);
+  return {
+    name: first?.name,
+    date: date && !Number.isNaN(date.getTime()) ? date : undefined,
+    url: first?.external_urls?.spotify
+  };
 }
 
 async function main() {
@@ -131,6 +169,11 @@ async function main() {
       spotifyUrl: true,
       coverImageUrl: true,
       topTrackUrl: true,
+      topTrackName: true,
+      spotifyFollowers: true,
+      latestReleaseName: true,
+      latestReleaseDate: true,
+      latestReleaseUrl: true,
       genres: true
     }
   });
@@ -151,7 +194,8 @@ async function main() {
     matched += 1;
     const spotifyUrl = best.external_urls?.spotify;
     const coverImageUrl = best.images?.[0]?.url;
-    const topTrackUrl = await getTopTrackUrl(token.access_token, best.id);
+    const topTrack = await getTopTrack(token.access_token, best.id);
+    const latestRelease = await getLatestRelease(token.access_token, best.id);
 
     const nextGenres =
       artist.genres && artist.genres.trim().length > 0
@@ -164,8 +208,15 @@ async function main() {
         data: {
           spotifyUrl: spotifyUrl ?? artist.spotifyUrl ?? undefined,
           coverImageUrl: coverImageUrl ?? artist.coverImageUrl ?? undefined,
-          topTrackUrl: topTrackUrl ?? artist.topTrackUrl ?? undefined,
-          genres: nextGenres ?? artist.genres
+          topTrackUrl: topTrack.url ?? artist.topTrackUrl ?? undefined,
+          topTrackName: topTrack.name ?? artist.topTrackName ?? undefined,
+          latestReleaseName: latestRelease.name ?? artist.latestReleaseName ?? undefined,
+          latestReleaseDate: latestRelease.date ?? artist.latestReleaseDate ?? undefined,
+          latestReleaseUrl: latestRelease.url ?? artist.latestReleaseUrl ?? undefined,
+          spotifyFollowers:
+            typeof best.followers?.total === "number" ? best.followers.total : artist.spotifyFollowers ?? undefined,
+          genres: nextGenres ?? artist.genres,
+          lastSpotifySyncedAt: new Date()
         }
       });
       updated += 1;

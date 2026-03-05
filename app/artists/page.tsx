@@ -85,7 +85,7 @@ export default async function ArtistsPage({
                     {...artist}
                     lang={lang}
                     variant="featured"
-                    topTrackUrl={artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl}
+                    topTrackUrl={artist.topTrackUrl || artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl}
                   />
                 </div>
               ))}
@@ -100,7 +100,7 @@ export default async function ArtistsPage({
               key={artist.id}
               {...artist}
               lang={lang}
-              topTrackUrl={artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl}
+              topTrackUrl={artist.topTrackUrl || artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl}
             />
           ))}
         </div>
