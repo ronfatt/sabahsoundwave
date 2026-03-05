@@ -1,10 +1,10 @@
-import { Prisma } from "@prisma/client";
+import { District } from "@prisma/client";
 import { createUniqueSlug } from "../lib/slug";
 import { prisma } from "../lib/prisma";
 
 type ImportArtist = {
   name: string;
-  district: Prisma.District;
+  district: District;
   genres: string;
   sourceGroup: string;
 };

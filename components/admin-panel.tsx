@@ -74,6 +74,7 @@ export function AdminPanel({
   const [selectedArtistIds, setSelectedArtistIds] = useState<string[]>([]);
   const [aiInsights, setAiInsights] = useState<Record<string, SubmissionAiInsight>>({});
   const [aiLoadingIds, setAiLoadingIds] = useState<string[]>([]);
+  const [autoReviewLoading, setAutoReviewLoading] = useState(false);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistStatusFilter, setArtistStatusFilter] = useState<ArtistItem["status"] | "ALL">("ALL");
   const [artistTypeFilter, setArtistTypeFilter] = useState<ArtistItem["type"] | "ALL">("ALL");
@@ -115,6 +116,10 @@ export function AdminPanel({
     dropDeleted: lang === "ms" ? "Drop Day berjaya dipadam" : "Drop Day deleted",
     confirmDeleteDrop: lang === "ms" ? "Padam Drop Day ini?" : "Delete this Drop Day?",
     aiPrecheckFailed: lang === "ms" ? "Semakan AI gagal" : "AI precheck failed",
+    autoReviewRun: lang === "ms" ? "AI auto semak (dry run)" : "AI auto-review (dry run)",
+    autoReviewApply: lang === "ms" ? "AI auto lulus/tolak" : "AI auto-approve/reject",
+    autoReviewRunning: lang === "ms" ? "AI sedang semak..." : "AI reviewing...",
+    autoReviewFailed: lang === "ms" ? "AI auto semak gagal" : "AI auto-review failed",
     dropDayManager: "Drop Day Manager",
     dropTitle: lang === "ms" ? "Tajuk Drop" : "Drop title",
     dropDescription: lang === "ms" ? "Penerangan Drop" : "Drop description",
@@ -452,6 +457,31 @@ export function AdminPanel({
     }));
   }
 
+  async function runAutoReview(apply: boolean) {
+    setAutoReviewLoading(true);
+    const response = await fetch("/api/admin/submissions/auto-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 120, apply })
+    });
+    const payload = await response.json().catch(() => null);
+    setAutoReviewLoading(false);
+
+    if (!response.ok || !payload) {
+      setStatusMessage(payload?.error || t.autoReviewFailed);
+      return;
+    }
+
+    if (apply && payload.submissions && payload.artists) {
+      setSubmissions(payload.submissions);
+      setArtists(payload.artists);
+    }
+
+    setStatusMessage(
+      `AI review: scanned ${payload.scanned}, approved ${payload.approved}, rejected ${payload.rejected}, pending ${payload.keptPending}${payload.usedAi ? "" : " (fallback mode)"}`
+    );
+  }
+
   const filteredArtists = useMemo(() => {
     const query = artistQuery.trim().toLowerCase();
     return artists.filter((artist) => {
@@ -623,7 +653,27 @@ export function AdminPanel({
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">{t.grouped}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xl font-semibold">{t.grouped}</h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => runAutoReview(false)}
+              disabled={autoReviewLoading}
+              className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50"
+            >
+              {autoReviewLoading ? t.autoReviewRunning : t.autoReviewRun}
+            </button>
+            <button
+              type="button"
+              onClick={() => runAutoReview(true)}
+              disabled={autoReviewLoading}
+              className="rounded bg-brand-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {autoReviewLoading ? t.autoReviewRunning : t.autoReviewApply}
+            </button>
+          </div>
+        </div>
         {groupedSubmissions.map((group) => (
           <div key={group.type} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
             <h3 className="text-lg font-semibold">{typeLabel(group.type)}</h3>
