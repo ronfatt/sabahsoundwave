@@ -91,13 +91,20 @@ async function searchArtist(token: string, name: string) {
 }
 
 async function getTopTrackUrl(token: string, artistId: string) {
-  const response = await fetch(
-    `https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=MY`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!response.ok) return undefined;
-  const data = (await response.json()) as SpotifyTopTracksResponse;
-  return data.tracks?.[0]?.external_urls?.spotify;
+  const markets = ["MY", "US", "GB"];
+
+  for (const market of markets) {
+    const response = await fetch(
+      `https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=${market}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!response.ok) continue;
+    const data = (await response.json()) as SpotifyTopTracksResponse;
+    const link = data.tracks?.[0]?.external_urls?.spotify;
+    if (link) return link;
+  }
+
+  return undefined;
 }
 
 async function main() {
