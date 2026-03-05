@@ -55,6 +55,8 @@ Open [http://localhost:3000](http://localhost:3000)
 - `DATABASE_URL="file:./dev.db"`
 - `ADMIN_PASSWORD="change-me"`
 - `OPENAI_API_KEY=""`
+- `SPOTIFY_CLIENT_ID=""` (for artist auto-enrichment)
+- `SPOTIFY_CLIENT_SECRET=""` (for artist auto-enrichment)
 
 ## Basic validation/error handling
 - Zod validation for submit/admin payloads
@@ -62,3 +64,14 @@ Open [http://localhost:3000](http://localhost:3000)
 - District is normalized in DB using Prisma `District` enum (not free-text)
 - URL fields validated when provided
 - API returns 400/401/404 for invalid input/auth/not-found
+
+## Spotify auto-enrich (optional)
+Use Spotify API to enrich artists by name (cover image, Spotify URL, top track URL).
+
+```bash
+# Dry run (no DB write)
+npm run spotify:enrich -- --pending-only --limit=30 --dry-run
+
+# Write updates
+npm run spotify:enrich -- --pending-only --limit=30
+```
