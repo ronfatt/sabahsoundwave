@@ -18,6 +18,7 @@ export function Navbar() {
     { href: "/", label: lang === "ms" ? "Utama" : "Home" },
     { href: "/about", label: "About" },
     { href: "/artists", label: lang === "ms" ? "Artis" : "Artists" },
+    { href: "/drop-day", label: "Drop Day" },
     { href: "/launch-support", label: "Launch Support" },
     { href: "/submit", label: lang === "ms" ? "Hantar Muzik" : "Submit Music" },
     { href: "/admin", label: "Admin" }

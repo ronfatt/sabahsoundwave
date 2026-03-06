@@ -5,6 +5,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { HeroBackground } from "@/components/hero-background";
 import { HeroHeadline } from "@/components/hero-headline";
 import { Navbar } from "@/components/navbar";
+import { SongShareButtons } from "@/components/song-share-buttons";
 import { DISTRICT_OPTIONS } from "@/lib/constants";
 import { getDistrictLabel, parseDistrict } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
@@ -142,6 +143,7 @@ export default async function Home({
   }
 
   const districtCountMap = new Map(districtCounts.map((item) => [item.district, item._count.district]));
+  const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.sabahsoundwave.com";
 
   const t = {
     tag: "Sabah Soundwave",
@@ -168,6 +170,7 @@ export default async function Home({
     featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
     songs: lang === "ms" ? "Cadangan Lagu" : "Song Recommendations",
+    songsCta: lang === "ms" ? "Lihat Drop Day mingguan" : "Open weekly Drop Day",
     songsRecent: lang === "ms" ? "Rilisan 30 hari terakhir" : "Released in last 30 days",
     songsFallback: lang === "ms" ? "Tiada rilisan 30 hari; paparan lagu terkini disegerak" : "No 30-day releases found; showing latest synced tracks",
     songsEmpty: lang === "ms" ? "Cadangan lagu akan muncul selepas sync Spotify seterusnya." : "Song recommendations will appear after the next Spotify sync.",
@@ -359,7 +362,12 @@ export default async function Home({
         <FilterBar district={district} genre={genre} lang={lang} />
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
-          <h2 className="text-2xl font-semibold text-slate-100">{t.songs}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-semibold text-slate-100">{t.songs}</h2>
+            <Link href={withLang("/drop-day", lang)} className="rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
+              {t.songsCta}
+            </Link>
+          </div>
           <p className="text-xs text-brand-300">{songsFromRecentWindow ? t.songsRecent : t.songsFallback}</p>
           {songRecommendations.length === 0 ? <p className="text-slate-400">{t.songsEmpty}</p> : null}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -396,7 +404,19 @@ export default async function Home({
                     >
                       {lang === "ms" ? "Profil artis" : "Artist profile"}
                     </Link>
+                    <Link
+                      href={withLang(`/song/${item.id}`, lang)}
+                      className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200"
+                    >
+                      {lang === "ms" ? "Spotlight" : "Spotlight"}
+                    </Link>
                   </div>
+                  <SongShareButtons
+                    compact
+                    shareUrl={`${appBaseUrl}/song/${item.id}`}
+                    songTitle={songTitle}
+                    artistName={item.name}
+                  />
                 </article>
               );
             })}
