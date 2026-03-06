@@ -46,11 +46,38 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "MusicOrganization",
-    name: "Sabah Soundwave",
-    url: "https://www.sabahsoundwave.com",
-    description: "The official home of Sabah original music and artists.",
-    areaServed: "Sabah, Malaysia"
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://www.sabahsoundwave.com/#organization",
+        name: "Sabah Soundwave",
+        url: "https://www.sabahsoundwave.com",
+        description:
+          "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful.",
+        areaServed: "Sabah, Malaysia"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://www.sabahsoundwave.com/#website",
+        url: "https://www.sabahsoundwave.com",
+        name: "Sabah Soundwave",
+        publisher: {
+          "@id": "https://www.sabahsoundwave.com/#organization"
+        }
+      },
+      {
+        "@type": "Product",
+        "@id": "https://www.sabahsoundwave.com/#product",
+        name: "Sabah Soundwave AI Visibility Platform",
+        description:
+          "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful.",
+        brand: {
+          "@id": "https://www.sabahsoundwave.com/#organization"
+        },
+        category: "AI Visibility Platform",
+        url: "https://www.sabahsoundwave.com"
+      }
+    ]
   };
 
   return (
