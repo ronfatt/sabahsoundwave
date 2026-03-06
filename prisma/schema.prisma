@@ -24,6 +24,8 @@ enum DiscoverySource {
   PLAYLIST
   SEARCH
   CSV_IMPORT
+  YOUTUBE_CHANNEL
+  YOUTUBE_SEARCH
 }
 
 enum VerificationStatus {

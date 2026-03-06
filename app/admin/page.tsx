@@ -13,7 +13,7 @@ type ArtistItem = {
   status: "PENDING" | "APPROVED" | "REJECTED";
   type: "NORMAL_LISTING" | "LAUNCH_SUPPORT";
   spotifyArtistId: string | null;
-  discoverySource: "MANUAL" | "SUBMISSION" | "PLAYLIST" | "SEARCH" | "CSV_IMPORT";
+  discoverySource: "MANUAL" | "SUBMISSION" | "PLAYLIST" | "SEARCH" | "CSV_IMPORT" | "YOUTUBE_CHANNEL" | "YOUTUBE_SEARCH";
   verificationStatus: "NEEDS_REVIEW" | "AUTO_APPROVED" | "VERIFIED" | "REJECTED";
   sabahConfidence: number;
   sourceTags: string | null;

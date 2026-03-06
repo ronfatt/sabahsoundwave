@@ -1,5 +1,6 @@
 import { discoverSpotifyArtists } from "@/lib/spotify-discover";
 import { enrichSpotifyArtists } from "@/lib/spotify-enrich";
+import { syncYoutubeArtists } from "@/lib/youtube-sync";
 import { NextRequest, NextResponse } from "next/server";
 
 function isAuthorized(request: NextRequest) {
@@ -20,18 +21,21 @@ export async function GET(request: NextRequest) {
 
   const target = Math.max(100, Number(process.env.SPOTIFY_DISCOVERY_TARGET || 220));
   const syncLimit = Math.max(60, Number(process.env.SPOTIFY_SYNC_DAILY_LIMIT || 180));
+  const youtubeDays = Math.max(7, Number(process.env.YOUTUBE_SYNC_DAYS || 30));
 
   try {
-    const [discoverResult, enrichResult] = await Promise.all([
+    const [discoverResult, enrichResult, youtubeResult] = await Promise.all([
       discoverSpotifyArtists({ target, dryRun: false }),
-      enrichSpotifyArtists({ limit: syncLimit, pendingOnly: false, dryRun: false })
+      enrichSpotifyArtists({ limit: syncLimit, pendingOnly: false, dryRun: false }),
+      syncYoutubeArtists({ dryRun: false, days: youtubeDays })
     ]);
 
     return NextResponse.json({
       ok: true,
       ranAt: new Date().toISOString(),
       discover: discoverResult,
-      enrich: enrichResult
+      enrich: enrichResult,
+      youtube: youtubeResult
     });
   } catch (error) {
     return NextResponse.json(

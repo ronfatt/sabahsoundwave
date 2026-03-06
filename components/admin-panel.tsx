@@ -12,7 +12,7 @@ type ArtistItem = {
   status: "PENDING" | "APPROVED" | "REJECTED";
   type: "NORMAL_LISTING" | "LAUNCH_SUPPORT";
   spotifyArtistId: string | null;
-  discoverySource: "MANUAL" | "SUBMISSION" | "PLAYLIST" | "SEARCH" | "CSV_IMPORT";
+  discoverySource: "MANUAL" | "SUBMISSION" | "PLAYLIST" | "SEARCH" | "CSV_IMPORT" | "YOUTUBE_CHANNEL" | "YOUTUBE_SEARCH";
   verificationStatus: "NEEDS_REVIEW" | "AUTO_APPROVED" | "VERIFIED" | "REJECTED";
   sabahConfidence: number;
   sourceTags: string | null;
@@ -88,6 +88,7 @@ export function AdminPanel({
   const [aiLoadingIds, setAiLoadingIds] = useState<string[]>([]);
   const [autoReviewLoading, setAutoReviewLoading] = useState(false);
   const [spotifySyncLoading, setSpotifySyncLoading] = useState(false);
+  const [youtubeSyncLoading, setYoutubeSyncLoading] = useState(false);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistStatusFilter, setArtistStatusFilter] = useState<ArtistItem["status"] | "ALL">("ALL");
   const [artistTypeFilter, setArtistTypeFilter] = useState<ArtistItem["type"] | "ALL">("ALL");
@@ -140,6 +141,9 @@ export function AdminPanel({
     spotifySyncPending: lang === "ms" ? "Sync pending only" : "Sync pending only",
     spotifySyncRunning: lang === "ms" ? "Spotify sedang sync..." : "Spotify syncing...",
     spotifySyncFailed: lang === "ms" ? "Sync Spotify gagal" : "Spotify sync failed",
+    youtubeSync: lang === "ms" ? "Sync YouTube now" : "Sync YouTube now",
+    youtubeSyncRunning: lang === "ms" ? "YouTube sedang sync..." : "YouTube syncing...",
+    youtubeSyncFailed: lang === "ms" ? "Sync YouTube gagal" : "YouTube sync failed",
     dropDayManager: "Drop Day Manager",
     dropTitle: lang === "ms" ? "Tajuk Drop" : "Drop title",
     dropDescription: lang === "ms" ? "Penerangan Drop" : "Drop description",
@@ -233,12 +237,16 @@ export function AdminPanel({
 
   function sourceLabel(value: ArtistItem["discoverySource"]) {
     if (value === "CSV_IMPORT") return "CSV Import";
+    if (value === "YOUTUBE_CHANNEL") return "YouTube Channel";
+    if (value === "YOUTUBE_SEARCH") return "YouTube Search";
     const map: Record<ArtistItem["discoverySource"], string> = {
       MANUAL: lang === "ms" ? "Manual" : "Manual",
       SUBMISSION: lang === "ms" ? "Hantaran" : "Submission",
       PLAYLIST: "Playlist",
       SEARCH: "Search",
-      CSV_IMPORT: "CSV Import"
+      CSV_IMPORT: "CSV Import",
+      YOUTUBE_CHANNEL: "YouTube Channel",
+      YOUTUBE_SEARCH: "YouTube Search"
     };
     return map[value];
   }
@@ -563,6 +571,32 @@ export function AdminPanel({
     );
   }
 
+  async function runYoutubeSync() {
+    setYoutubeSyncLoading(true);
+    const response = await fetch("/api/admin/youtube/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: false })
+    });
+    const payload = await response.json().catch(() => null);
+    setYoutubeSyncLoading(false);
+
+    if (!response.ok || !payload) {
+      setStatusMessage(`${t.youtubeSyncFailed}${payload?.error ? `: ${payload.error}` : ""}`);
+      return;
+    }
+
+    const dashboard = await fetch("/api/admin/dashboard").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (dashboard?.artists && dashboard?.submissions) {
+      setArtists(dashboard.artists);
+      setSubmissions(dashboard.submissions);
+    }
+
+    setStatusMessage(
+      `YouTube sync: candidates ${payload.candidates}, created ${payload.created}, updated ${payload.updated}, unchanged ${payload.unchanged}`
+    );
+  }
+
   const filteredArtists = useMemo(() => {
     const query = artistQuery.trim().toLowerCase();
     return artists.filter((artist) => {
@@ -763,6 +797,14 @@ export function AdminPanel({
             </button>
             <button
               type="button"
+              onClick={() => runYoutubeSync()}
+              disabled={youtubeSyncLoading}
+              className="rounded border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 disabled:opacity-50"
+            >
+              {youtubeSyncLoading ? t.youtubeSyncRunning : t.youtubeSync}
+            </button>
+            <button
+              type="button"
               onClick={() => runAutoReview(false)}
               disabled={autoReviewLoading}
               className="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50"
@@ -953,7 +995,7 @@ export function AdminPanel({
             className="rounded border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="ALL">{t.filterSource}: {t.all}</option>
-            {(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT"] as const).map((source) => (
+            {(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT", "YOUTUBE_CHANNEL", "YOUTUBE_SEARCH"] as const).map((source) => (
               <option key={source} value={source}>
                 {t.filterSource}: {sourceLabel(source)}
               </option>
@@ -1037,7 +1079,7 @@ export function AdminPanel({
                       className="rounded border border-slate-300 px-3 py-2 text-sm"
                     />
                     <select name="discoverySource" defaultValue={artist.discoverySource} className="rounded border border-slate-300 px-3 py-2 text-sm">
-                      {(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT"] as const).map((source) => (
+                      {(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT", "YOUTUBE_CHANNEL", "YOUTUBE_SEARCH"] as const).map((source) => (
                         <option key={source} value={source}>
                           {sourceLabel(source)}
                         </option>

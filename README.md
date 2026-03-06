@@ -122,6 +122,23 @@ Required env:
 - `SPOTIFY_PLAYLIST_IDS`
 - `SPOTIFY_DISCOVERY_TARGET` (optional, default `220`)
 - `SPOTIFY_SYNC_DAILY_LIMIT` (optional, default `180`)
+- `YOUTUBE_API_KEY` (for YouTube discovery/sync)
+- `YOUTUBE_CHANNEL_IDS` (comma-separated channel IDs, recommended)
+- `YOUTUBE_SEARCH_TERMS` (optional comma-separated fallback terms)
+- `YOUTUBE_SYNC_DAYS` (optional, default `30`)
+- `YOUTUBE_SYNC_MAX_PER_CHANNEL` (optional, default `20`)
+- `YOUTUBE_SYNC_MAX_SEARCH` (optional, default `30`)
+
+## YouTube sync (optional)
+Sync Sabah artist activity from YouTube channels + search:
+
+```bash
+# dry run
+npm run youtube:sync -- --days=30 --dry-run
+
+# write to DB
+npm run youtube:sync -- --days=30
+```
 
 ## Spotify CSV export (Node / recommended)
 Export a CSV from playlist artist seeds, including Spotify URL, genres, top song (MY), and followers.

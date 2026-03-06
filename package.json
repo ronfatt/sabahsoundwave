@@ -12,6 +12,7 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "spotify:enrich": "tsx prisma/enrich-spotify-artists.ts",
     "spotify:discover": "tsx prisma/discover-spotify-artists.ts",
+    "youtube:sync": "tsx prisma/sync-youtube.ts",
     "spotify:export-csv": "tsx prisma/export-spotify-csv.ts",
     "spotify:seed-playlists": "tsx prisma/import-from-spotify-playlists.ts",
     "spotify:import-csv": "tsx prisma/import-spotify-csv.ts"

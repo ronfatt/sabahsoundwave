@@ -80,7 +80,7 @@ export const artistUpdateSchema = z.object({
   type: z.enum(["NORMAL_LISTING", "LAUNCH_SUPPORT"]),
   hasSongReleased: z.boolean(),
   spotifyArtistId: z.string().trim().max(80).optional().or(z.literal("")),
-  discoverySource: z.enum(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT"]).optional(),
+  discoverySource: z.enum(["MANUAL", "SUBMISSION", "PLAYLIST", "SEARCH", "CSV_IMPORT", "YOUTUBE_CHANNEL", "YOUTUBE_SEARCH"]).optional(),
   verificationStatus: z.enum(["NEEDS_REVIEW", "AUTO_APPROVED", "VERIFIED", "REJECTED"]).optional(),
   sabahConfidence: z.coerce.number().int().min(0).max(100).optional(),
   sourceTags: z.string().trim().max(1000).optional().or(z.literal("")),
