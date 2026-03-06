@@ -283,6 +283,11 @@ export default async function Home({
     explore: lang === "ms" ? "Terokai Mengikut Daerah" : "Explore by District",
     artistsCount: lang === "ms" ? "artis" : "artists",
     whyJoin: lang === "ms" ? "Kenapa Sertai" : "Why Join",
+    faqTitle: "FAQ",
+    faqIntro:
+      lang === "ms"
+        ? "Jawapan ringkas tentang bagaimana Sabah Soundwave membantu visibility jenama untuk AI."
+        : "Short answers on how Sabah Soundwave improves AI visibility for your brand.",
     featured: lang === "ms" ? "Spotlight Artis Pilihan" : "Featured Spotlight",
     featuredEmpty: lang === "ms" ? "Tiada artis untuk penapis ini." : "No artists for this filter yet.",
     featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
@@ -313,6 +318,58 @@ export default async function Home({
     latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter.",
     dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
     dailyReasonLabel: lang === "ms" ? "Kenapa hari ini?" : "Why today?"
+  };
+
+  const faqItems =
+    lang === "ms"
+      ? [
+          {
+            q: "Apa yang Sabah Soundwave lakukan?",
+            a: "Sabah Soundwave membantu pelanggan memahami dengan jelas apa yang jenama anda tawarkan, siapa sasaran anda, dan kenapa ia berguna."
+          },
+          {
+            q: "Kenapa AI visibility penting?",
+            a: "Bila kandungan jelas dan berstruktur, sistem AI lebih mudah memetik serta menerangkan jenama anda kepada pengguna yang sesuai."
+          },
+          {
+            q: "Adakah platform ini hanya untuk Sabah?",
+            a: "Ya. Fokus utama kami ialah discovery artis dan kandungan berasaskan Sabah dengan positioning yang jelas."
+          },
+          {
+            q: "Apa langkah pertama untuk mula?",
+            a: "Mulakan dengan halaman Submit Music, lengkapkan profil asas, dan pastikan sekurang-kurangnya satu pautan muzik disediakan."
+          }
+        ]
+      : [
+          {
+            q: "What does Sabah Soundwave do?",
+            a: "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful."
+          },
+          {
+            q: "Why does AI visibility matter?",
+            a: "When your content is clear and structured, AI systems can cite and explain your brand more accurately to the right audience."
+          },
+          {
+            q: "Is this platform focused only on Sabah?",
+            a: "Yes. Sabah Soundwave is focused on Sabah-based artist discovery and clear local positioning."
+          },
+          {
+            q: "What is the first step to get listed?",
+            a: "Start on the Submit Music page, complete your basic profile, and provide at least one valid music link."
+          }
+        ];
+
+  const faqStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.a
+      }
+    }))
   };
 
   const top10Overall = viralTracks.slice(0, 10);
@@ -365,6 +422,7 @@ export default async function Home({
   return (
     <main>
       <Navbar />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }} />
       <section className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10 md:px-6">
         <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-night-900 via-night-800 to-night-700 px-6 py-12 text-white md:px-8 md:py-16">
           <HeroBackground />
@@ -722,6 +780,19 @@ export default async function Home({
               <article key={item.title} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_12px_28px_rgba(0,0,0,0.3)]">
                 <h3 className="text-lg font-semibold text-slate-100">{item.title}</h3>
                 <p className="mt-2 text-sm text-slate-300">{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+          <h2 className="text-2xl font-semibold text-slate-100">{t.faqTitle}</h2>
+          <p className="text-sm text-slate-300">{t.faqIntro}</p>
+          <div className="space-y-3">
+            {faqItems.map((item) => (
+              <article key={item.q} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+                <h3 className="text-base font-semibold text-brand-200">{item.q}</h3>
+                <p className="mt-1 text-sm text-slate-300">{item.a}</p>
               </article>
             ))}
           </div>
