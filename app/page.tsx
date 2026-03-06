@@ -269,12 +269,12 @@ export default async function Home({
 
   const t = {
     tag: "Sabah Soundwave",
-    title: "Make your website easier for AI to understand and cite",
-    subtitle: "The Official Home of Sabah Original Music.",
+    title: "Discover the Sound of Sabah",
+    subtitle: "The home of Sabah original artists. Explore music from Kota Kinabalu, Tawau, Sandakan and across Borneo.",
     desc:
       lang === "ms"
-        ? "Sabah Soundwave menonjolkan artis dari Kota Kinabalu, Tawau, Sandakan dan seluruh Sabah. Dengar, kongsi dan sokong pemuzik tempatan."
-        : "Sabah Soundwave highlights artists from Kota Kinabalu, Tawau, Sandakan, and across Sabah. Listen, share, and help independent musicians reach new audiences.",
+        ? "Sabah Soundwave menghubungkan pendengar dengan pemuzik bebas. Temui artis baharu, rilisan akan datang, dan bunyi unik Sabah."
+        : "Sabah Soundwave connects listeners with independent musicians. Discover new artists, upcoming releases, and the unique sound of Sabah.",
     listHeading: lang === "ms" ? "Kenapa tingkatkan AI visibility?" : "Why improve AI visibility?",
     listItems:
       lang === "ms"
