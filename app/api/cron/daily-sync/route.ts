@@ -19,11 +19,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await runDailySync();
-    return NextResponse.json({ ...result, alias: "/api/cron/spotify-daily", preferred: "/api/cron/daily-sync" });
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Daily spotify job failed" },
+      { error: error instanceof Error ? error.message : "Daily sync failed" },
       { status: 500 }
     );
   }
 }
+

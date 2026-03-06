@@ -109,11 +109,14 @@ New artist metadata fields used by discovery:
 - `sourceTags` (playlist/search trace)
 
 ## Daily auto-sync (Vercel Cron)
-Daily job endpoint: `/api/cron/spotify-daily`
+Daily job endpoint: `/api/cron/daily-sync`
+Legacy alias (still works): `/api/cron/spotify-daily`
 
 What it does:
 1. Discover new artists (`playlist-first`, then `search fallback`)
 2. Enrich tracks/releases/followers for existing artists
+3. Sync YouTube channel/search releases
+4. Auto-approve high-confidence discoveries
 
 Required env:
 - `CRON_SECRET` (used by cron authorization)
@@ -130,6 +133,8 @@ Required env:
 - `YOUTUBE_SYNC_MAX_SEARCH` (optional, default `30`)
 - `YOUTUBE_MIN_STORE_CONFIDENCE` (optional, default `72`, lower confidence goes to candidate pool)
 - `YOUTUBE_CHANNEL_PROMOTE_HITS` (optional, default `3`, auto-promote channel to seed after repeated hits)
+- `SPOTIFY_AUTO_APPROVE_CONFIDENCE` (optional, default `90`)
+- `YOUTUBE_AUTO_APPROVE_CONFIDENCE` (optional, default `90`, only channel-based candidates auto-approve)
 
 ## YouTube sync (optional)
 Sync Sabah artist activity from YouTube channels + search:

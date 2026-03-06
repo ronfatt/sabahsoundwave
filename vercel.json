@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/spotify-daily",
+      "path": "/api/cron/daily-sync",
       "schedule": "20 19 * * *"
     }
   ]

@@ -57,11 +57,28 @@ export default async function Home({
     topTrackUrl: string | null;
     latestReleaseName: string | null;
     latestReleaseDate: Date | null;
+    latestReleaseUrl: string | null;
+    spotifyUrl: string | null;
+    appleMusicUrl: string | null;
+    youtubeUrl: string | null;
+  }> = [];
+  let weeklySongChart: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    district: string;
+    topTrackName: string | null;
+    topTrackUrl: string | null;
+    latestReleaseName: string | null;
+    latestReleaseDate: Date | null;
+    latestReleaseUrl: string | null;
     spotifyUrl: string | null;
     appleMusicUrl: string | null;
     youtubeUrl: string | null;
   }> = [];
   let songsFromRecentWindow = false;
+  let weeklyChartFallback = false;
+  const weekReleaseThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const recentReleaseThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   try {
@@ -77,7 +94,7 @@ export default async function Home({
       ]
     };
 
-    const [f, l, d, n, c, dropCount, recentSongs, fallbackSongs] = await Promise.all([
+    const [f, l, d, n, c, dropCount, recentSongs, fallbackSongs, weeklySongs] = await Promise.all([
       prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
       prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
       prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
@@ -103,6 +120,7 @@ export default async function Home({
           topTrackUrl: true,
           latestReleaseName: true,
           latestReleaseDate: true,
+          latestReleaseUrl: true,
           spotifyUrl: true,
           appleMusicUrl: true,
           youtubeUrl: true
@@ -121,12 +139,32 @@ export default async function Home({
           topTrackUrl: true,
           latestReleaseName: true,
           latestReleaseDate: true,
+          latestReleaseUrl: true,
           spotifyUrl: true,
           appleMusicUrl: true,
           youtubeUrl: true
         },
         orderBy: [{ lastSpotifySyncedAt: "desc" }, { updatedAt: "desc" }],
         take: 12
+      }),
+      prisma.artist.findMany({
+        where: { ...songWhere, latestReleaseDate: { gte: weekReleaseThreshold } },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          district: true,
+          topTrackName: true,
+          topTrackUrl: true,
+          latestReleaseName: true,
+          latestReleaseDate: true,
+          latestReleaseUrl: true,
+          spotifyUrl: true,
+          appleMusicUrl: true,
+          youtubeUrl: true
+        },
+        orderBy: [{ latestReleaseDate: "desc" }, { lastSpotifySyncedAt: "desc" }],
+        take: 10
       })
     ]);
     hasManualFeatured = f.length > 0;
@@ -138,6 +176,8 @@ export default async function Home({
     upcomingDropCount = dropCount;
     songsFromRecentWindow = recentSongs.length > 0;
     songRecommendations = recentSongs.length > 0 ? recentSongs : fallbackSongs;
+    weeklyChartFallback = weeklySongs.length === 0;
+    weeklySongChart = weeklySongs.length > 0 ? weeklySongs : songRecommendations.slice(0, 10);
   } catch (error) {
     console.error("Home page data fetch failed:", error);
   }
@@ -170,6 +210,12 @@ export default async function Home({
     featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
     songs: lang === "ms" ? "Cadangan Lagu" : "Song Recommendations",
+    weeklySongs: lang === "ms" ? "Carta Lagu Baharu (7 Hari)" : "New Song Chart (7 Days)",
+    weeklySongsHint: lang === "ms" ? "Dikemas kini automatik dari Spotify + YouTube setiap hari." : "Auto-updated daily from Spotify + YouTube sync.",
+    weeklySongsFallback:
+      lang === "ms"
+        ? "Tiada rilisan baharu 7 hari terakhir; paparan lagu terkini sebagai gantian."
+        : "No new releases in last 7 days; showing latest available tracks.",
     songsCta: lang === "ms" ? "Lihat Drop Day mingguan" : "Open weekly Drop Day",
     songsRecent: lang === "ms" ? "Rilisan 30 hari terakhir" : "Released in last 30 days",
     songsFallback: lang === "ms" ? "Tiada rilisan 30 hari; paparan lagu terkini disegerak" : "No 30-day releases found; showing latest synced tracks",
@@ -360,6 +406,59 @@ export default async function Home({
         </section>
 
         <FilterBar district={district} genre={genre} lang={lang} />
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-semibold text-slate-100">{t.weeklySongs}</h2>
+            <Link href={withLang("/drop-day", lang)} className="rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
+              {t.songsCta}
+            </Link>
+          </div>
+          <p className="text-xs text-brand-300">{weeklyChartFallback ? t.weeklySongsFallback : t.weeklySongsHint}</p>
+          <div className="grid gap-3">
+            {weeklySongChart.length === 0 ? <p className="text-sm text-slate-400">{t.songsEmpty}</p> : null}
+            {weeklySongChart.map((item, index) => {
+              const listenUrl = item.topTrackUrl || item.latestReleaseUrl || item.spotifyUrl || item.appleMusicUrl || item.youtubeUrl;
+              const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
+              const releaseDateLabel = item.latestReleaseDate
+                ? new Date(item.latestReleaseDate).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric"
+                  })
+                : null;
+              return (
+                <article key={`weekly-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-brand-400/40 bg-brand-500/10 text-xs font-bold text-brand-200">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-100">{songTitle}</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {t.byArtist} {item.name} · {getDistrictLabel(item.district)}
+                        </p>
+                        {releaseDateLabel ? <p className="mt-1 text-xs text-slate-500">{t.releasedOn}: {releaseDateLabel}</p> : null}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {listenUrl ? (
+                        <Link href={listenUrl} target="_blank" className="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-slate-950">
+                          {t.listenNow}
+                        </Link>
+                      ) : null}
+                      <Link href={withLang(`/song/${item.id}`, lang)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200">
+                        {lang === "ms" ? "Spotlight" : "Spotlight"}
+                      </Link>
+                    </div>
+                  </div>
+                  <SongShareButtons compact shareUrl={`${appBaseUrl}/song/${item.id}`} songTitle={songTitle} artistName={item.name} />
+                </article>
+              );
+            })}
+          </div>
+        </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
