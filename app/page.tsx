@@ -98,6 +98,14 @@ export default async function Home({
     appleMusicUrl: string | null;
     youtubeUrl: string | null;
   }> = [];
+  let newsItems: Array<{
+    id: string;
+    title: string;
+    url: string;
+    source: string | null;
+    publishedAt: Date;
+    summary: string | null;
+  }> = [];
   let songsFromRecentWindow = false;
   let weeklyChartFallback = false;
   let viralChartFallback = false;
@@ -247,6 +255,15 @@ export default async function Home({
     console.error("Home page data fetch failed:", error);
   }
 
+  try {
+    newsItems = await prisma.newsItem.findMany({
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      take: 6
+    });
+  } catch {
+    newsItems = [];
+  }
+
   const districtCountMap = new Map(districtCounts.map((item) => [item.district, item._count.district]));
   const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.sabahsoundwave.com";
 
@@ -283,6 +300,16 @@ export default async function Home({
     explore: lang === "ms" ? "Terokai Mengikut Daerah" : "Explore by District",
     artistsCount: lang === "ms" ? "artis" : "artists",
     whyJoin: lang === "ms" ? "Kenapa Sertai" : "Why Join",
+    newsTitle: lang === "ms" ? "Berita Muzik Sabah (Global)" : "Sabah Music News (Global)",
+    newsSubtitle:
+      lang === "ms"
+        ? "Disaring automatik dari liputan global dan diringkaskan untuk komuniti Sabah."
+        : "Auto-curated from global coverage and summarized for the Sabah music community.",
+    readMore: lang === "ms" ? "Baca lanjut" : "Read more",
+    newsEmpty:
+      lang === "ms"
+        ? "Belum ada berita tersimpan. Jalankan News Sync di admin atau tunggu cron harian."
+        : "No news saved yet. Run News Sync in admin or wait for daily cron.",
     faqTitle: "FAQ",
     faqIntro:
       lang === "ms"
@@ -780,6 +807,32 @@ export default async function Home({
               <article key={item.title} className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-[0_12px_28px_rgba(0,0,0,0.3)]">
                 <h3 className="text-lg font-semibold text-slate-100">{item.title}</h3>
                 <p className="mt-2 text-sm text-slate-300">{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+          <h2 className="text-2xl font-semibold text-slate-100">{t.newsTitle}</h2>
+          <p className="text-sm text-slate-300">{t.newsSubtitle}</p>
+          {newsItems.length === 0 ? <p className="text-sm text-slate-400">{t.newsEmpty}</p> : null}
+          <div className="grid gap-3 md:grid-cols-2">
+            {newsItems.map((item) => (
+              <article key={item.id} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+                <p className="text-base font-semibold text-slate-100">{item.title}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {(item.source || "Global") +
+                    " · " +
+                    new Date(item.publishedAt).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric"
+                    })}
+                </p>
+                <p className="mt-2 text-sm text-slate-300">{item.summary || item.title}</p>
+                <Link href={item.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
+                  {t.readMore}
+                </Link>
               </article>
             ))}
           </div>

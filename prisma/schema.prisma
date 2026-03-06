@@ -156,3 +156,18 @@ model YoutubeDiscoveryCandidate {
   @@index([normalizedName])
   @@index([channelId])
 }
+
+model NewsItem {
+  id          String   @id @default(cuid())
+  title       String
+  url         String   @unique
+  source      String?
+  publishedAt DateTime
+  summary     String?
+  region      String   @default("GLOBAL")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([publishedAt])
+  @@index([region, publishedAt])
+}

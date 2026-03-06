@@ -112,6 +112,7 @@ export function AdminPanel({
   const [autoReviewLoading, setAutoReviewLoading] = useState(false);
   const [spotifySyncLoading, setSpotifySyncLoading] = useState(false);
   const [youtubeSyncLoading, setYoutubeSyncLoading] = useState(false);
+  const [newsSyncLoading, setNewsSyncLoading] = useState(false);
   const [candidateActionId, setCandidateActionId] = useState<string | null>(null);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistStatusFilter, setArtistStatusFilter] = useState<ArtistItem["status"] | "ALL">("ALL");
@@ -169,6 +170,9 @@ export function AdminPanel({
     youtubeSync: lang === "ms" ? "Sync YouTube now" : "Sync YouTube now",
     youtubeSyncRunning: lang === "ms" ? "YouTube sedang sync..." : "YouTube syncing...",
     youtubeSyncFailed: lang === "ms" ? "Sync YouTube gagal" : "YouTube sync failed",
+    newsSync: lang === "ms" ? "Sync News now" : "Sync News now",
+    newsSyncRunning: lang === "ms" ? "News sedang sync..." : "News syncing...",
+    newsSyncFailed: lang === "ms" ? "Sync News gagal" : "News sync failed",
     youtubeCandidates: lang === "ms" ? "YouTube Candidate Queue" : "YouTube Candidate Queue",
     approveToArtist: lang === "ms" ? "Luluskan ke Artist" : "Approve to Artist",
     dismissCandidate: lang === "ms" ? "Abaikan" : "Dismiss",
@@ -631,6 +635,26 @@ export function AdminPanel({
     );
   }
 
+  async function runNewsSync() {
+    setNewsSyncLoading(true);
+    const response = await fetch("/api/admin/news/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: false })
+    });
+    const payload = await response.json().catch(() => null);
+    setNewsSyncLoading(false);
+
+    if (!response.ok || !payload) {
+      setStatusMessage(`${t.newsSyncFailed}${payload?.error ? `: ${payload.error}` : ""}`);
+      return;
+    }
+
+    setStatusMessage(
+      `News sync: fetched ${payload.fetched}, deduped ${payload.deduped}, selected ${payload.selected}`
+    );
+  }
+
   async function reviewYoutubeCandidate(id: string, action: "approve" | "dismiss") {
     setCandidateActionId(id);
     const response = await fetch(`/api/admin/youtube/candidates/${id}`, {
@@ -912,6 +936,14 @@ export function AdminPanel({
               className="rounded border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 disabled:opacity-50"
             >
               {youtubeSyncLoading ? t.youtubeSyncRunning : t.youtubeSync}
+            </button>
+            <button
+              type="button"
+              onClick={() => runNewsSync()}
+              disabled={newsSyncLoading}
+              className="rounded border border-indigo-500/40 px-3 py-2 text-xs font-semibold text-indigo-700 disabled:opacity-50"
+            >
+              {newsSyncLoading ? t.newsSyncRunning : t.newsSync}
             </button>
             <button
               type="button"
