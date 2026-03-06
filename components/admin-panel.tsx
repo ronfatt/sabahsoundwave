@@ -83,6 +83,7 @@ type SubmissionAiInsight = {
 const TYPES: ArtistItem["type"][] = ["NORMAL_LISTING", "LAUNCH_SUPPORT"];
 const STATUSES: ArtistItem["status"][] = ["PENDING", "APPROVED", "REJECTED"];
 const ARTISTS_PER_PAGE = 12;
+const SUBMISSION_BUCKET_PREVIEW = 10;
 
 export function AdminPanel({
   lang,
@@ -127,6 +128,7 @@ export function AdminPanel({
   const [editingDropDate, setEditingDropDate] = useState("");
   const [editingDropDescription, setEditingDropDescription] = useState("");
   const [editingDropArtistIds, setEditingDropArtistIds] = useState<string[]>([]);
+  const [expandedSubmissionBuckets, setExpandedSubmissionBuckets] = useState<Record<string, boolean>>({});
 
   const groupedSubmissions = useMemo(() => {
     return TYPES.map((type) => ({
@@ -225,6 +227,9 @@ export function AdminPanel({
     version: lang === "ms" ? "Versi" : "Version",
     agreementPending: lang === "ms" ? "Perjanjian belum disahkan" : "Agreement not accepted yet",
     submitTermsRecords: lang === "ms" ? "Rekod Submit Music Terms" : "Submit Music Terms Records"
+    ,
+    showMore: lang === "ms" ? "Lihat lagi" : "Show more",
+    collapse: lang === "ms" ? "Sorok" : "Collapse"
   };
 
   function formatDateTime(value: string) {
@@ -647,6 +652,10 @@ export function AdminPanel({
     setStatusMessage(t.candidateUpdated);
   }
 
+  function toggleSubmissionBucket(key: string) {
+    setExpandedSubmissionBuckets((current) => ({ ...current, [key]: !current[key] }));
+  }
+
   const filteredArtists = useMemo(() => {
     const query = artistQuery.trim().toLowerCase();
     return artists.filter((artist) => {
@@ -931,63 +940,85 @@ export function AdminPanel({
                   <p className="text-sm font-semibold">
                     {statusLabel(bucket.status)} ({bucket.items.length})
                   </p>
-                  <div className="space-y-2">
-                    {bucket.items.length === 0 ? <p className="text-xs text-slate-500">{t.noItems}</p> : null}
-                    {bucket.items.map((item) => (
-                      <article key={item.id} className="space-y-1 rounded-lg bg-slate-50 p-2">
-                        <p className="text-sm font-medium">{item.name}</p>
-                        <p className="text-xs text-slate-600">{getDistrictLabel(item.district)} · {item.genres}</p>
-                        <p className="text-xs text-slate-600">
-                          {item.submitTermsAcceptedAt
-                            ? `Submit Music Terms: ${formatDateTime(item.submitTermsAcceptedAt)}`
-                            : "Submit Music Terms: not accepted"}
-                        </p>
-                        {item.type === "LAUNCH_SUPPORT" ? (
-                          <p className="text-xs text-slate-600">
-                            {item.starterAgreementAcceptedAt
-                              ? `${t.acceptedAt}: ${formatDateTime(item.starterAgreementAcceptedAt)}${
-                                  item.starterAgreementVersion ? ` · ${t.version}: ${item.starterAgreementVersion}` : ""
-                                }`
-                              : t.agreementPending}
-                          </p>
+                  {(() => {
+                    const bucketKey = `${group.type}-${bucket.status}`;
+                    const expanded = Boolean(expandedSubmissionBuckets[bucketKey]);
+                    const hasMore = bucket.items.length > SUBMISSION_BUCKET_PREVIEW;
+                    const visibleItems = expanded ? bucket.items : bucket.items.slice(0, SUBMISSION_BUCKET_PREVIEW);
+
+                    return (
+                      <div className="space-y-2">
+                        {bucket.items.length === 0 ? <p className="text-xs text-slate-500">{t.noItems}</p> : null}
+                        {hasMore ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleSubmissionBucket(bucketKey)}
+                            className="rounded border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700"
+                          >
+                            {expanded
+                              ? t.collapse
+                              : `${t.showMore} (+${bucket.items.length - SUBMISSION_BUCKET_PREVIEW})`}
+                          </button>
                         ) : null}
-                        {aiInsights[item.id] ? (
-                          <div className="rounded border border-brand-200 bg-brand-50 p-2 text-xs text-slate-700">
-                            <p className="font-semibold">
-                              {t.aiPackage}: {aiInsights[item.id].recommendedPackage}
-                            </p>
-                            <p className="mt-1">
-                              {t.aiTags}: {aiInsights[item.id].tags.join(" · ") || t.manualFollowup}
-                            </p>
-                            <p className="mt-1">{aiInsights[item.id].reason}</p>
-                          </div>
-                        ) : null}
-                        {item.status === "PENDING" ? (
-                          <div className="flex gap-2 pt-1">
-                            <button
-                              onClick={() => runAiPrecheck(item)}
-                              disabled={aiLoadingIds.includes(item.id)}
-                              className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 disabled:opacity-50"
-                            >
-                              {aiLoadingIds.includes(item.id) ? t.aiChecking : t.aiPrecheck}
-                            </button>
-                            <button
-                              onClick={() => moderateSubmission(item.id, "approve")}
-                              className="rounded bg-brand-600 px-2 py-1 text-xs font-semibold text-white"
-                            >
-                              {t.approve}
-                            </button>
-                            <button
-                              onClick={() => moderateSubmission(item.id, "reject")}
-                              className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white"
-                            >
-                              {t.reject}
-                            </button>
-                          </div>
-                        ) : null}
-                      </article>
-                    ))}
-                  </div>
+                        <div className={expanded ? "max-h-[26rem] space-y-2 overflow-y-auto pr-1" : "space-y-2"}>
+                          {visibleItems.map((item) => (
+                            <article key={item.id} className="space-y-1 rounded-lg bg-slate-50 p-2">
+                              <p className="text-sm font-medium">{item.name}</p>
+                              <p className="text-xs text-slate-600">{getDistrictLabel(item.district)} · {item.genres}</p>
+                              <p className="text-xs text-slate-600">
+                                {item.submitTermsAcceptedAt
+                                  ? `Submit Music Terms: ${formatDateTime(item.submitTermsAcceptedAt)}`
+                                  : "Submit Music Terms: not accepted"}
+                              </p>
+                              {item.type === "LAUNCH_SUPPORT" ? (
+                                <p className="text-xs text-slate-600">
+                                  {item.starterAgreementAcceptedAt
+                                    ? `${t.acceptedAt}: ${formatDateTime(item.starterAgreementAcceptedAt)}${
+                                        item.starterAgreementVersion ? ` · ${t.version}: ${item.starterAgreementVersion}` : ""
+                                      }`
+                                    : t.agreementPending}
+                                </p>
+                              ) : null}
+                              {aiInsights[item.id] ? (
+                                <div className="rounded border border-brand-200 bg-brand-50 p-2 text-xs text-slate-700">
+                                  <p className="font-semibold">
+                                    {t.aiPackage}: {aiInsights[item.id].recommendedPackage}
+                                  </p>
+                                  <p className="mt-1">
+                                    {t.aiTags}: {aiInsights[item.id].tags.join(" · ") || t.manualFollowup}
+                                  </p>
+                                  <p className="mt-1">{aiInsights[item.id].reason}</p>
+                                </div>
+                              ) : null}
+                              {item.status === "PENDING" ? (
+                                <div className="flex gap-2 pt-1">
+                                  <button
+                                    onClick={() => runAiPrecheck(item)}
+                                    disabled={aiLoadingIds.includes(item.id)}
+                                    className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 disabled:opacity-50"
+                                  >
+                                    {aiLoadingIds.includes(item.id) ? t.aiChecking : t.aiPrecheck}
+                                  </button>
+                                  <button
+                                    onClick={() => moderateSubmission(item.id, "approve")}
+                                    className="rounded bg-brand-600 px-2 py-1 text-xs font-semibold text-white"
+                                  >
+                                    {t.approve}
+                                  </button>
+                                  <button
+                                    onClick={() => moderateSubmission(item.id, "reject")}
+                                    className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white"
+                                  >
+                                    {t.reject}
+                                  </button>
+                                </div>
+                              ) : null}
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
