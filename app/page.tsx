@@ -10,7 +10,14 @@ import { DISTRICT_OPTIONS } from "@/lib/constants";
 import { getDistrictLabel, parseDistrict } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Sabah Soundwave | AI visibility platform for brands",
+  description:
+    "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful."
+};
 
 export default async function Home({
   searchParams
@@ -245,7 +252,7 @@ export default async function Home({
 
   const t = {
     tag: "Sabah Soundwave",
-    title: "One State. One Sound. One Wave.",
+    title: "Make your website easier for AI to understand and cite",
     subtitle: "The Official Home of Sabah Original Music.",
     desc:
       lang === "ms"
