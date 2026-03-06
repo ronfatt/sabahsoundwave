@@ -62,6 +62,21 @@ export default async function Home({
     appleMusicUrl: string | null;
     youtubeUrl: string | null;
   }> = [];
+  let viralTracks: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    district: string;
+    topTrackName: string | null;
+    topTrackUrl: string | null;
+    latestReleaseName: string | null;
+    latestReleaseDate: Date | null;
+    latestReleaseUrl: string | null;
+    spotifyUrl: string | null;
+    youtubeUrl: string | null;
+    spotifyFollowers: number | null;
+    sabahConfidence: number;
+  }> = [];
   let weeklySongChart: Array<{
     id: string;
     name: string;
@@ -78,6 +93,7 @@ export default async function Home({
   }> = [];
   let songsFromRecentWindow = false;
   let weeklyChartFallback = false;
+  let viralChartFallback = false;
   const weekReleaseThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const recentReleaseThreshold = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -94,7 +110,7 @@ export default async function Home({
       ]
     };
 
-    const [f, l, d, n, c, dropCount, recentSongs, fallbackSongs, weeklySongs] = await Promise.all([
+    const [f, l, d, n, c, dropCount, recentSongs, fallbackSongs, weeklySongs, viralRecent, viralFallback] = await Promise.all([
       prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
       prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
       prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
@@ -165,6 +181,46 @@ export default async function Home({
         },
         orderBy: [{ latestReleaseDate: "desc" }, { lastSpotifySyncedAt: "desc" }],
         take: 10
+      }),
+      prisma.artist.findMany({
+        where: { ...songWhere, latestReleaseDate: { gte: weekReleaseThreshold } },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          district: true,
+          topTrackName: true,
+          topTrackUrl: true,
+          latestReleaseName: true,
+          latestReleaseDate: true,
+          latestReleaseUrl: true,
+          spotifyUrl: true,
+          youtubeUrl: true,
+          spotifyFollowers: true,
+          sabahConfidence: true
+        },
+        orderBy: [{ latestReleaseDate: "desc" }, { sabahConfidence: "desc" }, { spotifyFollowers: "desc" }],
+        take: 40
+      }),
+      prisma.artist.findMany({
+        where: songWhere,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          district: true,
+          topTrackName: true,
+          topTrackUrl: true,
+          latestReleaseName: true,
+          latestReleaseDate: true,
+          latestReleaseUrl: true,
+          spotifyUrl: true,
+          youtubeUrl: true,
+          spotifyFollowers: true,
+          sabahConfidence: true
+        },
+        orderBy: [{ lastSpotifySyncedAt: "desc" }, { sabahConfidence: "desc" }],
+        take: 40
       })
     ]);
     hasManualFeatured = f.length > 0;
@@ -178,6 +234,8 @@ export default async function Home({
     songRecommendations = recentSongs.length > 0 ? recentSongs : fallbackSongs;
     weeklyChartFallback = weeklySongs.length === 0;
     weeklySongChart = weeklySongs.length > 0 ? weeklySongs : songRecommendations.slice(0, 10);
+    viralChartFallback = viralRecent.length === 0;
+    viralTracks = viralRecent.length > 0 ? viralRecent : viralFallback;
   } catch (error) {
     console.error("Home page data fetch failed:", error);
   }
@@ -210,6 +268,15 @@ export default async function Home({
     featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
     songs: lang === "ms" ? "Cadangan Lagu" : "Song Recommendations",
+    viralMode: lang === "ms" ? "爆红模式 · Carta Panas Sabah" : "Viral Mode · Sabah Heat Chart",
+    viralModeHint: lang === "ms" ? "Top 10 mingguan + sub-carta platform, terus boleh kongsi." : "Weekly Top 10 + platform sub-charts, ready to share instantly.",
+    viralModeFallback:
+      lang === "ms"
+        ? "Rilisan 7 hari masih terhad; guna ranking terkini yang tersedia."
+        : "7-day releases are limited; showing latest available ranking.",
+    top10Overall: lang === "ms" ? "Top 10 Keseluruhan" : "Top 10 Overall",
+    topSpotify: "Top Spotify",
+    topYoutube: "Top YouTube",
     weeklySongs: lang === "ms" ? "Carta Lagu Baharu (7 Hari)" : "New Song Chart (7 Days)",
     weeklySongsHint: lang === "ms" ? "Dikemas kini automatik dari Spotify + YouTube setiap hari." : "Auto-updated daily from Spotify + YouTube sync.",
     weeklySongsFallback:
@@ -227,6 +294,10 @@ export default async function Home({
     dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
     dailyReasonLabel: lang === "ms" ? "Kenapa hari ini?" : "Why today?"
   };
+
+  const top10Overall = viralTracks.slice(0, 10);
+  const topSpotify = viralTracks.filter((item) => Boolean(item.spotifyUrl || item.topTrackUrl)).slice(0, 10);
+  const topYoutube = viralTracks.filter((item) => Boolean(item.youtubeUrl || item.topTrackUrl)).slice(0, 10);
   const stats = [
     { label: lang === "ms" ? "Artis Diluluskan" : "Approved Artists", value: dailyCandidates.length },
     { label: lang === "ms" ? "Daerah Aktif" : "Active Districts", value: districtCounts.length },
@@ -406,6 +477,62 @@ export default async function Home({
         </section>
 
         <FilterBar district={district} genre={genre} lang={lang} />
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
+          <div className="rounded-2xl border border-brand-500/30 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.16),transparent_45%),linear-gradient(180deg,#060b15_0%,#0b1120_100%)] p-5 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-bold text-slate-100">{t.viralMode}</h2>
+              <Link href={withLang("/drop-day", lang)} className="rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
+                {t.songsCta}
+              </Link>
+            </div>
+            <p className="mt-2 text-xs text-brand-300">{viralChartFallback ? t.viralModeFallback : t.viralModeHint}</p>
+            <div className="mt-4 grid gap-4 lg:grid-cols-3">
+              {[
+                { key: "overall", title: t.top10Overall, list: top10Overall },
+                { key: "spotify", title: t.topSpotify, list: topSpotify },
+                { key: "youtube", title: t.topYoutube, list: topYoutube }
+              ].map((group) => (
+                <section key={group.key} className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                  <h3 className="text-sm font-semibold text-brand-200">{group.title}</h3>
+                  <div className="mt-3 space-y-3">
+                    {group.list.length === 0 ? <p className="text-xs text-slate-400">{t.songsEmpty}</p> : null}
+                    {group.list.map((item, index) => {
+                      const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
+                      const listenUrl = item.topTrackUrl || item.latestReleaseUrl || item.spotifyUrl || item.youtubeUrl;
+                      return (
+                        <article key={`${group.key}-${item.id}`} className="rounded-lg border border-slate-800/80 bg-slate-900/80 p-3">
+                          <div className="flex items-start gap-2">
+                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-brand-400/40 bg-brand-500/10 text-[11px] font-bold text-brand-200">
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-semibold text-slate-100">{songTitle}</p>
+                              <p className="truncate text-[11px] text-slate-400">
+                                {item.name} · {getDistrictLabel(item.district)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {listenUrl ? (
+                              <Link href={listenUrl} target="_blank" className="rounded-md bg-brand-500 px-2 py-1 text-[11px] font-semibold text-slate-950">
+                                {t.listenNow}
+                              </Link>
+                            ) : null}
+                            <Link href={withLang(`/song/${item.id}`, lang)} className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200">
+                              Spotlight
+                            </Link>
+                          </div>
+                          <SongShareButtons compact shareUrl={`${appBaseUrl}/song/${item.id}`} songTitle={songTitle} artistName={item.name} />
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
