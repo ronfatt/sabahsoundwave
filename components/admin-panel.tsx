@@ -55,6 +55,25 @@ type DropEventItem = {
   }>;
 };
 
+type YoutubeCandidateItem = {
+  id: string;
+  sourceType: "YOUTUBE_CHANNEL" | "YOUTUBE_SEARCH";
+  status: "NEW" | "REVIEWED" | "DISMISSED";
+  confidence: number;
+  artistName: string;
+  normalizedName: string;
+  channelId: string;
+  channelTitle: string;
+  videoId: string;
+  songTitle: string;
+  publishedAt: string;
+  watchUrl: string;
+  thumbnailUrl: string | null;
+  sourceTerm: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type SubmissionAiInsight = {
   recommendedPackage: "Starter" | "Pro" | "Label";
   tags: string[];
@@ -69,16 +88,19 @@ export function AdminPanel({
   lang,
   initialSubmissions,
   initialArtists,
-  initialDropEvents
+  initialDropEvents,
+  initialYoutubeCandidates
 }: {
   lang: Lang;
   initialSubmissions: ArtistItem[];
   initialArtists: ArtistItem[];
   initialDropEvents: DropEventItem[];
+  initialYoutubeCandidates: YoutubeCandidateItem[];
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [artists, setArtists] = useState(initialArtists);
   const [dropEvents, setDropEvents] = useState(initialDropEvents);
+  const [youtubeCandidates, setYoutubeCandidates] = useState(initialYoutubeCandidates);
   const [statusMessage, setStatusMessage] = useState("");
   const [dropTitle, setDropTitle] = useState("");
   const [dropDate, setDropDate] = useState("");
@@ -89,6 +111,7 @@ export function AdminPanel({
   const [autoReviewLoading, setAutoReviewLoading] = useState(false);
   const [spotifySyncLoading, setSpotifySyncLoading] = useState(false);
   const [youtubeSyncLoading, setYoutubeSyncLoading] = useState(false);
+  const [candidateActionId, setCandidateActionId] = useState<string | null>(null);
   const [artistQuery, setArtistQuery] = useState("");
   const [artistStatusFilter, setArtistStatusFilter] = useState<ArtistItem["status"] | "ALL">("ALL");
   const [artistTypeFilter, setArtistTypeFilter] = useState<ArtistItem["type"] | "ALL">("ALL");
@@ -144,6 +167,11 @@ export function AdminPanel({
     youtubeSync: lang === "ms" ? "Sync YouTube now" : "Sync YouTube now",
     youtubeSyncRunning: lang === "ms" ? "YouTube sedang sync..." : "YouTube syncing...",
     youtubeSyncFailed: lang === "ms" ? "Sync YouTube gagal" : "YouTube sync failed",
+    youtubeCandidates: lang === "ms" ? "YouTube Candidate Queue" : "YouTube Candidate Queue",
+    approveToArtist: lang === "ms" ? "Luluskan ke Artist" : "Approve to Artist",
+    dismissCandidate: lang === "ms" ? "Abaikan" : "Dismiss",
+    candidateUpdated: lang === "ms" ? "Calon YouTube dikemas kini" : "YouTube candidate updated",
+    noCandidates: lang === "ms" ? "Tiada calon YouTube baru." : "No new YouTube candidates.",
     dropDayManager: "Drop Day Manager",
     dropTitle: lang === "ms" ? "Tajuk Drop" : "Drop title",
     dropDescription: lang === "ms" ? "Penerangan Drop" : "Drop description",
@@ -590,11 +618,33 @@ export function AdminPanel({
     if (dashboard?.artists && dashboard?.submissions) {
       setArtists(dashboard.artists);
       setSubmissions(dashboard.submissions);
+      setYoutubeCandidates(dashboard.youtubeCandidates || []);
     }
 
     setStatusMessage(
       `YouTube sync: candidates ${payload.candidates}, created ${payload.created}, updated ${payload.updated}, unchanged ${payload.unchanged}`
     );
+  }
+
+  async function reviewYoutubeCandidate(id: string, action: "approve" | "dismiss") {
+    setCandidateActionId(id);
+    const response = await fetch(`/api/admin/youtube/candidates/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action })
+    });
+    const payload = await response.json().catch(() => null);
+    setCandidateActionId(null);
+
+    if (!response.ok || !payload) {
+      setStatusMessage(payload?.error || t.actionFailed);
+      return;
+    }
+
+    if (payload.youtubeCandidates) setYoutubeCandidates(payload.youtubeCandidates);
+    if (payload.artists) setArtists(payload.artists);
+    if (payload.submissions) setSubmissions(payload.submissions);
+    setStatusMessage(t.candidateUpdated);
   }
 
   const filteredArtists = useMemo(() => {
@@ -636,6 +686,57 @@ export function AdminPanel({
   return (
     <section className="space-y-8">
       {statusMessage ? <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{statusMessage}</p> : null}
+
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 className="text-xl font-semibold">{t.youtubeCandidates}</h2>
+        {youtubeCandidates.length === 0 ? (
+          <p className="text-sm text-slate-500">{t.noCandidates}</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {youtubeCandidates.map((item) => (
+              <article key={item.id} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900">{item.artistName}</p>
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                    confidence {item.confidence}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600">{item.songTitle}</p>
+                <p className="text-xs text-slate-500">
+                  {item.sourceType === "YOUTUBE_CHANNEL" ? "YouTube Channel" : "YouTube Search"} · {item.channelTitle}
+                  {item.sourceTerm ? ` · ${item.sourceTerm}` : ""}
+                </p>
+                <p className="text-xs text-slate-500">{formatDateTime(item.publishedAt)}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={item.watchUrl}
+                    target="_blank"
+                    className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700"
+                  >
+                    YouTube
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => reviewYoutubeCandidate(item.id, "approve")}
+                    disabled={candidateActionId === item.id}
+                    className="rounded bg-brand-600 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {t.approveToArtist}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => reviewYoutubeCandidate(item.id, "dismiss")}
+                    disabled={candidateActionId === item.id}
+                    className="rounded bg-slate-700 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {t.dismissCandidate}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
         <h2 className="text-xl font-semibold">{t.dropDayManager}</h2>

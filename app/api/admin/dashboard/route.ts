@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [submissions, artists, dropEvents] = await Promise.all([
+  const [submissions, artists, dropEvents, youtubeCandidates] = await Promise.all([
     prisma.artist.findMany({
       orderBy: [{ type: "asc" }, { status: "asc" }, { createdAt: "desc" }]
     }),
@@ -27,8 +27,13 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: { date: "asc" }
+    }),
+    prisma.youtubeDiscoveryCandidate.findMany({
+      where: { status: "NEW" },
+      orderBy: [{ confidence: "desc" }, { publishedAt: "desc" }],
+      take: 120
     })
   ]);
 
-  return NextResponse.json({ submissions, artists, dropEvents });
+  return NextResponse.json({ submissions, artists, dropEvents, youtubeCandidates });
 }

@@ -56,10 +56,30 @@ type DropEventItem = {
   }>;
 };
 
+type YoutubeCandidateItem = {
+  id: string;
+  sourceType: "YOUTUBE_CHANNEL" | "YOUTUBE_SEARCH";
+  status: "NEW" | "REVIEWED" | "DISMISSED";
+  confidence: number;
+  artistName: string;
+  normalizedName: string;
+  channelId: string;
+  channelTitle: string;
+  videoId: string;
+  songTitle: string;
+  publishedAt: string;
+  watchUrl: string;
+  thumbnailUrl: string | null;
+  sourceTerm: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type AdminData = {
   submissions: ArtistItem[];
   artists: ArtistItem[];
   dropEvents: DropEventItem[];
+  youtubeCandidates: YoutubeCandidateItem[];
 };
 
 export default function AdminPage() {
@@ -173,7 +193,13 @@ export default function AdminPage() {
         {dashboardError ? <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{dashboardError}</p> : null}
         {authorized && !data ? <p>{lang === "ms" ? "Memuatkan dashboard..." : "Loading dashboard..."}</p> : null}
         {authorized && data ? (
-          <AdminPanel lang={lang} initialSubmissions={data.submissions} initialArtists={data.artists} initialDropEvents={data.dropEvents} />
+          <AdminPanel
+            lang={lang}
+            initialSubmissions={data.submissions}
+            initialArtists={data.artists}
+            initialDropEvents={data.dropEvents}
+            initialYoutubeCandidates={data.youtubeCandidates}
+          />
         ) : null}
       </section>
     </main>
