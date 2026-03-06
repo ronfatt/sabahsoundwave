@@ -258,6 +258,19 @@ export default async function Home({
       lang === "ms"
         ? "Sabah Soundwave menonjolkan artis dari Kota Kinabalu, Tawau, Sandakan dan seluruh Sabah. Dengar, kongsi dan sokong pemuzik tempatan."
         : "Sabah Soundwave highlights artists from Kota Kinabalu, Tawau, Sandakan, and across Sabah. Listen, share, and help independent musicians reach new audiences.",
+    listHeading: lang === "ms" ? "Kenapa tingkatkan AI visibility?" : "Why improve AI visibility?",
+    listItems:
+      lang === "ms"
+        ? [
+            "Jenama anda lebih mudah dirujuk oleh AI.",
+            "Kandungan anda lebih mudah diringkaskan dengan tepat.",
+            "Laman anda lebih kuat dalam carian berasaskan AI."
+          ]
+        : [
+            "Your brand is easier for AI systems to cite.",
+            "Your content is easier to summarize accurately.",
+            "Your site appears stronger in AI-driven discovery."
+          ],
     submit: lang === "ms" ? "Hantar Muzik" : "Submit Music",
     launch: "Launch Support",
     nextDrop: lang === "ms" ? "Drop Day Seterusnya" : "Next Drop Day",
@@ -360,6 +373,14 @@ export default async function Home({
             <HeroHeadline text={t.title} />
             <p className="max-w-2xl text-base font-semibold text-brand-100 md:text-lg">{t.subtitle}</p>
             <p className="max-w-2xl text-base text-slate-200 md:text-lg">{t.desc}</p>
+            <div className="max-w-2xl rounded-xl border border-brand-500/25 bg-slate-900/55 p-4">
+              <h2 className="text-sm font-semibold text-brand-200">{t.listHeading}</h2>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200">
+                {t.listItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
             <div className="flex flex-wrap gap-3">
               <Link href={withLang("/submit", lang)} className="glow-cta rounded-xl bg-brand-500 px-5 py-3 text-sm font-bold uppercase tracking-wide text-slate-950">
                 {t.submit}
