@@ -128,6 +128,8 @@ Required env:
 - `YOUTUBE_SYNC_DAYS` (optional, default `30`)
 - `YOUTUBE_SYNC_MAX_PER_CHANNEL` (optional, default `20`)
 - `YOUTUBE_SYNC_MAX_SEARCH` (optional, default `30`)
+- `YOUTUBE_MIN_STORE_CONFIDENCE` (optional, default `72`, lower confidence goes to candidate pool)
+- `YOUTUBE_CHANNEL_PROMOTE_HITS` (optional, default `3`, auto-promote channel to seed after repeated hits)
 
 ## YouTube sync (optional)
 Sync Sabah artist activity from YouTube channels + search:

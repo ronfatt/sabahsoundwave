@@ -35,6 +35,12 @@ enum VerificationStatus {
   REJECTED
 }
 
+enum CandidateStatus {
+  NEW
+  REVIEWED
+  DISMISSED
+}
+
 enum District {
   KOTA_KINABALU
   PAPAR
@@ -109,4 +115,44 @@ model DropEvent {
   updatedAt   DateTime @updatedAt
 
   @@index([date])
+}
+
+model YoutubeSeedChannel {
+  id           String   @id @default(cuid())
+  channelId    String   @unique
+  channelTitle String
+  source       String   @default("AUTO")
+  active       Boolean  @default(true)
+  promoted     Boolean  @default(false)
+  hitCount     Int      @default(0)
+  discoveredAt DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([active, promoted])
+  @@index([hitCount])
+}
+
+model YoutubeDiscoveryCandidate {
+  id             String          @id @default(cuid())
+  sourceType     DiscoverySource
+  status         CandidateStatus @default(NEW)
+  confidence     Int
+  artistName     String
+  normalizedName String
+  channelId      String
+  channelTitle   String
+  videoId        String          @unique
+  songTitle      String
+  publishedAt    DateTime
+  watchUrl       String
+  thumbnailUrl   String?
+  sourceTerm     String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status, confidence])
+  @@index([normalizedName])
+  @@index([channelId])
 }
