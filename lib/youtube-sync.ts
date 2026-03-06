@@ -133,6 +133,7 @@ export async function syncYoutubeArtists(options?: {
   const maxSearchResults = Math.max(10, Math.min(50, Number(options?.maxSearchResults || process.env.YOUTUBE_SYNC_MAX_SEARCH || 30)));
   const minStoreConfidence = Math.max(50, Math.min(95, Number(process.env.YOUTUBE_MIN_STORE_CONFIDENCE || 72)));
   const promoteHitThreshold = Math.max(2, Number(process.env.YOUTUBE_CHANNEL_PROMOTE_HITS || 3));
+  const autoApproveThreshold = Math.max(70, Math.min(98, Number(process.env.YOUTUBE_AUTO_APPROVE_CONFIDENCE || 90)));
 
   const publishedAfter = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   const envChannelIds = parseChannelIds(process.env.YOUTUBE_CHANNEL_IDS);
@@ -274,6 +275,7 @@ export async function syncYoutubeArtists(options?: {
   const existingArtists = await prisma.artist.findMany({
     select: {
       id: true,
+      status: true,
       name: true,
       slug: true,
       youtubeUrl: true,
@@ -301,6 +303,7 @@ export async function syncYoutubeArtists(options?: {
     const current = byName.get(key);
     const confidence = confidenceFor(item.sourceType, item.songTitle);
     const verificationStatus = verificationFromConfidence(confidence);
+    const canAutoApprove = confidence >= autoApproveThreshold && item.sourceType === "YOUTUBE_CHANNEL";
     const watchUrl = toYoutubeWatchUrl(item.videoId);
     const channelUrl = toYoutubeChannelUrl(item.channelId);
     const sourceTags = `${item.sourceType === "YOUTUBE_CHANNEL" ? "youtube-channel" : "youtube-search"}:${item.channelTitle}${
@@ -344,6 +347,7 @@ export async function syncYoutubeArtists(options?: {
         !current.latestReleaseDate || item.publishedAt.getTime() > new Date(current.latestReleaseDate).getTime();
 
       const patch = {
+        status: canAutoApprove && current.status === "PENDING" ? "APPROVED" : current.status,
         youtubeUrl: current.youtubeUrl || channelUrl,
         discoverySource: item.sourceType,
         verificationStatus,
@@ -360,6 +364,7 @@ export async function syncYoutubeArtists(options?: {
       };
 
       const changed =
+        patch.status !== current.status ||
         patch.youtubeUrl !== current.youtubeUrl ||
         patch.topTrackUrl !== current.topTrackUrl ||
         patch.topTrackName !== current.topTrackName ||
@@ -386,7 +391,7 @@ export async function syncYoutubeArtists(options?: {
       await prisma.artist.create({
         data: {
           slug,
-          status: "PENDING",
+          status: canAutoApprove ? "APPROVED" : "PENDING",
           type: "NORMAL_LISTING",
           discoverySource: item.sourceType,
           verificationStatus,

@@ -169,6 +169,7 @@ export async function discoverSpotifyArtists(options?: {
   const playlistIds = (options?.playlistIds ?? (process.env.SPOTIFY_PLAYLIST_IDS || "").split(",")).map((x) => x.trim()).filter(Boolean);
   const searchTerms = options?.searchTerms?.length ? options.searchTerms : DEFAULT_TERMS;
   const dryRun = Boolean(options?.dryRun);
+  const autoApproveThreshold = Math.max(70, Math.min(98, Number(process.env.SPOTIFY_AUTO_APPROVE_CONFIDENCE || 90)));
 
   if (playlistIds.length === 0) {
     throw new Error("No Spotify playlist IDs configured. Set SPOTIFY_PLAYLIST_IDS.");
@@ -248,6 +249,7 @@ export async function discoverSpotifyArtists(options?: {
     select: {
       id: true,
       slug: true,
+      status: true,
       name: true,
       spotifyArtistId: true,
       genres: true,
@@ -269,6 +271,7 @@ export async function discoverSpotifyArtists(options?: {
   for (const candidate of candidates) {
     const confidence = toConfidence(candidate);
     const verificationStatus = toVerificationStatus(confidence);
+    const canAutoApprove = confidence >= autoApproveThreshold && Boolean(candidate.spotifyUrl);
     const sourceType: DiscoverySource = candidate.sourcePlaylists.size > 0 ? "PLAYLIST" : "SEARCH";
     const sourceTag = [
       ...[...candidate.sourcePlaylists].map((name) => `playlist:${name}`),
@@ -283,6 +286,7 @@ export async function discoverSpotifyArtists(options?: {
 
     if (existingArtist) {
       const patch = {
+        status: canAutoApprove && existingArtist.status === "PENDING" ? "APPROVED" : existingArtist.status,
         spotifyArtistId: existingArtist.spotifyArtistId || candidate.spotifyArtistId,
         spotifyUrl: existingArtist.spotifyUrl || candidate.spotifyUrl,
         coverImageUrl: existingArtist.coverImageUrl || candidate.coverImageUrl,
@@ -294,6 +298,7 @@ export async function discoverSpotifyArtists(options?: {
         discoveredAt: new Date()
       };
       const changed =
+        patch.status !== existingArtist.status ||
         patch.spotifyArtistId !== existingArtist.spotifyArtistId ||
         patch.spotifyUrl !== existingArtist.spotifyUrl ||
         patch.coverImageUrl !== existingArtist.coverImageUrl ||
@@ -318,7 +323,7 @@ export async function discoverSpotifyArtists(options?: {
       await prisma.artist.create({
         data: {
           slug,
-          status: "PENDING",
+          status: canAutoApprove ? "APPROVED" : "PENDING",
           type: "NORMAL_LISTING",
           spotifyArtistId: candidate.spotifyArtistId,
           discoverySource: sourceType,

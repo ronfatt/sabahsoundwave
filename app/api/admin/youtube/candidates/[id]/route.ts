@@ -44,6 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const artists = await prisma.artist.findMany({
     select: {
       id: true,
+      status: true,
       name: true,
       slug: true,
       youtubeUrl: true,
@@ -66,6 +67,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     await prisma.artist.update({
       where: { id: existing.id },
       data: {
+        status: "APPROVED",
         discoverySource: candidate.sourceType,
         verificationStatus,
         sabahConfidence: Math.max(existing.sabahConfidence ?? 0, candidate.confidence),
@@ -88,7 +90,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     await prisma.artist.create({
       data: {
         slug,
-        status: "PENDING",
+        status: "APPROVED",
         type: "NORMAL_LISTING",
         discoverySource: candidate.sourceType,
         verificationStatus,
