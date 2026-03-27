@@ -19,6 +19,17 @@ export const metadata: Metadata = {
     "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful."
 };
 
+function formatShortDate(value: Date | string | null | undefined, lang: "en" | "ms") {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  });
+}
+
 export default async function Home({
   searchParams
 }: {
@@ -106,7 +117,6 @@ export default async function Home({
     publishedAt: Date;
     summary: string | null;
   }> = [];
-  let songsFromRecentWindow = false;
   let weeklyChartFallback = false;
   let viralChartFallback = false;
   const weekReleaseThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -245,7 +255,6 @@ export default async function Home({
     nextDropEvent = n;
     dailyCandidates = c;
     upcomingDropCount = dropCount;
-    songsFromRecentWindow = recentSongs.length > 0;
     songRecommendations = recentSongs.length > 0 ? recentSongs : fallbackSongs;
     weeklyChartFallback = weeklySongs.length === 0;
     weeklySongChart = weeklySongs.length > 0 ? weeklySongs : songRecommendations.slice(0, 10);
@@ -319,7 +328,10 @@ export default async function Home({
     featuredEmpty: lang === "ms" ? "Tiada artis untuk penapis ini." : "No artists for this filter yet.",
     featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
-    songs: lang === "ms" ? "Cadangan Lagu" : "Song Recommendations",
+    songsSpotlight:
+      lang === "ms"
+        ? "Rilisan segar, terus boleh dengar dan kongsi."
+        : "Fresh Sabah releases, ready to listen and share.",
     viralMode: lang === "ms" ? "爆红模式 · Carta Panas Sabah" : "Viral Mode · Sabah Heat Chart",
     viralModeHint: lang === "ms" ? "Top 10 mingguan + sub-carta platform, terus boleh kongsi." : "Weekly Top 10 + platform sub-charts, ready to share instantly.",
     viralModeFallback:
@@ -329,19 +341,25 @@ export default async function Home({
     top10Overall: lang === "ms" ? "Top 10 Keseluruhan" : "Top 10 Overall",
     topSpotify: "Top Spotify",
     topYoutube: "Top YouTube",
-    weeklySongs: lang === "ms" ? "Carta Lagu Baharu (7 Hari)" : "New Song Chart (7 Days)",
+    weeklySongs: lang === "ms" ? "Baharu Minggu Ini" : "New This Week",
+    weeklySongsLead: lang === "ms" ? "Pilihan utama minggu ini" : "Lead release this week",
+    weeklySongsQuickHits: lang === "ms" ? "Lagi rilisan baru" : "More fresh drops",
+    weeklySongsShareReady: lang === "ms" ? "Sedia untuk kongsi" : "Ready to share now",
     weeklySongsHint: lang === "ms" ? "Dikemas kini automatik dari Spotify + YouTube setiap hari." : "Auto-updated daily from Spotify + YouTube sync.",
     weeklySongsFallback:
       lang === "ms"
         ? "Tiada rilisan baharu 7 hari terakhir; paparan lagu terkini sebagai gantian."
         : "No new releases in last 7 days; showing latest available tracks.",
     songsCta: lang === "ms" ? "Lihat Drop Day mingguan" : "Open weekly Drop Day",
-    songsRecent: lang === "ms" ? "Rilisan 30 hari terakhir" : "Released in last 30 days",
-    songsFallback: lang === "ms" ? "Tiada rilisan 30 hari; paparan lagu terkini disegerak" : "No 30-day releases found; showing latest synced tracks",
     songsEmpty: lang === "ms" ? "Cadangan lagu akan muncul selepas sync Spotify seterusnya." : "Song recommendations will appear after the next Spotify sync.",
     listenNow: lang === "ms" ? "Dengar sekarang" : "Listen now",
     releasedOn: lang === "ms" ? "Tarikh rilis" : "Released",
     byArtist: lang === "ms" ? "oleh" : "by",
+    newsBadge: lang === "ms" ? "Auto-curated newsroom" : "Auto-curated newsroom",
+    newsLead: lang === "ms" ? "Tajuk utama" : "Lead story",
+    newsQuickHits: lang === "ms" ? "Berita ringkas" : "Quick hits",
+    newsMoreCoverage: lang === "ms" ? "Liputan tambahan" : "More coverage",
+    newsGlobal: lang === "ms" ? "Global" : "Global",
     latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter.",
     dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
     dailyReasonLabel: lang === "ms" ? "Kenapa hari ini?" : "Why today?"
@@ -402,6 +420,12 @@ export default async function Home({
   const top10Overall = viralTracks.slice(0, 10);
   const topSpotify = viralTracks.filter((item) => Boolean(item.spotifyUrl || item.topTrackUrl)).slice(0, 10);
   const topYoutube = viralTracks.filter((item) => Boolean(item.youtubeUrl || item.topTrackUrl)).slice(0, 10);
+  const weeklyLeadSong = weeklySongChart[0] ?? null;
+  const weeklySecondarySongs = weeklySongChart.slice(1, 5);
+  const shareReadySongs = songRecommendations.slice(0, 3);
+  const leadNewsItem = newsItems[0] ?? null;
+  const quickNewsItems = newsItems.slice(1, 5);
+  const moreNewsItems = newsItems.slice(5, 8);
   const stats = [
     { label: lang === "ms" ? "Artis Diluluskan" : "Approved Artists", value: dailyCandidates.length },
     { label: lang === "ms" ? "Daerah Aktif" : "Active Districts", value: districtCounts.length },
@@ -647,119 +671,144 @@ export default async function Home({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
+        <section className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-semibold text-slate-100">{t.weeklySongs}</h2>
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-100">{t.weeklySongs}</h2>
+              <p className="mt-1 text-sm text-slate-300">{t.songsSpotlight}</p>
+            </div>
             <Link href={withLang("/drop-day", lang)} className="rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
               {t.songsCta}
             </Link>
           </div>
           <p className="text-xs text-brand-300">{weeklyChartFallback ? t.weeklySongsFallback : t.weeklySongsHint}</p>
-          <div className="grid gap-3">
-            {weeklySongChart.length === 0 ? <p className="text-sm text-slate-400">{t.songsEmpty}</p> : null}
-            {weeklySongChart.map((item, index) => {
-              const listenUrl = item.topTrackUrl || item.latestReleaseUrl || item.spotifyUrl || item.appleMusicUrl || item.youtubeUrl;
-              const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
-              const releaseDateLabel = item.latestReleaseDate
-                ? new Date(item.latestReleaseDate).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric"
-                  })
-                : null;
-              return (
-                <article key={`weekly-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-brand-400/40 bg-brand-500/10 text-xs font-bold text-brand-200">
-                        {index + 1}
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-100">{songTitle}</p>
-                        <p className="mt-1 text-xs text-slate-400">
-                          {t.byArtist} {item.name} · {getDistrictLabel(item.district)}
-                        </p>
-                        {releaseDateLabel ? <p className="mt-1 text-xs text-slate-500">{t.releasedOn}: {releaseDateLabel}</p> : null}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {listenUrl ? (
-                        <Link href={listenUrl} target="_blank" className="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-slate-950">
-                          {t.listenNow}
-                        </Link>
-                      ) : null}
-                      <Link href={withLang(`/song/${item.id}`, lang)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200">
-                        {lang === "ms" ? "Spotlight" : "Spotlight"}
-                      </Link>
-                    </div>
-                  </div>
-                  <SongShareButtons compact shareUrl={`${appBaseUrl}/song/${item.id}`} songTitle={songTitle} artistName={item.name} />
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-semibold text-slate-100">{t.songs}</h2>
-            <Link href={withLang("/drop-day", lang)} className="rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
-              {t.songsCta}
-            </Link>
-          </div>
-          <p className="text-xs text-brand-300">{songsFromRecentWindow ? t.songsRecent : t.songsFallback}</p>
-          {songRecommendations.length === 0 ? <p className="text-slate-400">{t.songsEmpty}</p> : null}
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {songRecommendations.map((item) => {
-              const listenUrl = item.topTrackUrl || item.spotifyUrl || item.appleMusicUrl || item.youtubeUrl;
-              const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
-              const releaseDateLabel = item.latestReleaseDate
-                ? new Date(item.latestReleaseDate).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric"
-                  })
-                : null;
-              return (
-                <article key={item.id} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                  <p className="text-sm font-semibold text-slate-100">{songTitle}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {t.byArtist} {item.name} · {getDistrictLabel(item.district)}
+          {weeklySongChart.length === 0 ? <p className="text-sm text-slate-400">{t.songsEmpty}</p> : null}
+          {weeklyLeadSong ? (
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.95fr)]">
+              <article className="rounded-2xl border border-brand-500/30 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.16),transparent_42%),linear-gradient(180deg,rgba(6,11,21,0.95),rgba(11,17,32,0.92))] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.42)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-300">{t.weeklySongsLead}</p>
+                <h3 className="mt-3 text-3xl font-bold leading-tight text-slate-50">
+                  {weeklyLeadSong.topTrackName || weeklyLeadSong.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track")}
+                </h3>
+                <p className="mt-3 text-sm text-slate-300">
+                  {t.byArtist} {weeklyLeadSong.name} · {getDistrictLabel(weeklyLeadSong.district)}
+                </p>
+                {formatShortDate(weeklyLeadSong.latestReleaseDate, lang) ? (
+                  <p className="mt-2 inline-flex rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs text-brand-200">
+                    {t.releasedOn}: {formatShortDate(weeklyLeadSong.latestReleaseDate, lang)}
                   </p>
-                  {releaseDateLabel ? <p className="mt-1 text-xs text-slate-500">{t.releasedOn}: {releaseDateLabel}</p> : null}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {listenUrl ? (
-                      <Link
-                        href={listenUrl}
-                        target="_blank"
-                        className="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-slate-950"
-                      >
-                        {t.listenNow}
-                      </Link>
-                    ) : null}
+                ) : null}
+                <p className="mt-4 max-w-2xl text-sm text-slate-300">
+                  {lang === "ms"
+                    ? "Pilih lagu ini sebagai pintu masuk untuk pendengar baru. Teruskan ke spotlight, dengar sekarang, atau kongsi ke WhatsApp."
+                    : "Use this release as the front door for new listeners. Jump to the spotlight page, listen now, or share it instantly."}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {(weeklyLeadSong.topTrackUrl ||
+                    weeklyLeadSong.latestReleaseUrl ||
+                    weeklyLeadSong.spotifyUrl ||
+                    weeklyLeadSong.appleMusicUrl ||
+                    weeklyLeadSong.youtubeUrl) ? (
                     <Link
-                      href={withLang(`/artists/${item.slug}`, lang)}
-                      className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200"
+                      href={
+                        weeklyLeadSong.topTrackUrl ||
+                        weeklyLeadSong.latestReleaseUrl ||
+                        weeklyLeadSong.spotifyUrl ||
+                        weeklyLeadSong.appleMusicUrl ||
+                        weeklyLeadSong.youtubeUrl ||
+                        "#"
+                      }
+                      target="_blank"
+                      className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-slate-950"
                     >
-                      {lang === "ms" ? "Profil artis" : "Artist profile"}
+                      {t.listenNow}
                     </Link>
-                    <Link
-                      href={withLang(`/song/${item.id}`, lang)}
-                      className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200"
-                    >
-                      {lang === "ms" ? "Spotlight" : "Spotlight"}
-                    </Link>
-                  </div>
+                  ) : null}
+                  <Link href={withLang(`/song/${weeklyLeadSong.id}`, lang)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100">
+                    Spotlight
+                  </Link>
+                  <Link href={withLang(`/artists/${weeklyLeadSong.slug}`, lang)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300">
+                    {lang === "ms" ? "Profil artis" : "Artist profile"}
+                  </Link>
+                </div>
+                <div className="mt-4">
                   <SongShareButtons
-                    compact
-                    shareUrl={`${appBaseUrl}/song/${item.id}`}
-                    songTitle={songTitle}
-                    artistName={item.name}
+                    shareUrl={`${appBaseUrl}/song/${weeklyLeadSong.id}`}
+                    songTitle={weeklyLeadSong.topTrackName || weeklyLeadSong.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track")}
+                    artistName={weeklyLeadSong.name}
                   />
-                </article>
-              );
-            })}
-          </div>
+                </div>
+              </article>
+
+              <div className="space-y-3">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-4">
+                  <h3 className="text-sm font-semibold text-brand-200">{t.weeklySongsQuickHits}</h3>
+                  <div className="mt-3 space-y-3">
+                    {weeklySecondarySongs.map((item, index) => {
+                      const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
+                      const listenUrl = item.topTrackUrl || item.latestReleaseUrl || item.spotifyUrl || item.appleMusicUrl || item.youtubeUrl;
+                      return (
+                        <article key={`secondary-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                          <div className="flex items-start gap-3">
+                            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/40 bg-brand-500/10 text-xs font-bold text-brand-200">
+                              {index + 2}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-slate-100">{songTitle}</p>
+                              <p className="truncate text-xs text-slate-400">
+                                {item.name} · {getDistrictLabel(item.district)}
+                              </p>
+                              {formatShortDate(item.latestReleaseDate, lang) ? (
+                                <p className="mt-1 text-[11px] text-slate-500">{formatShortDate(item.latestReleaseDate, lang)}</p>
+                              ) : null}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              {listenUrl ? (
+                                <Link href={listenUrl} target="_blank" className="rounded-md bg-brand-500 px-2 py-1 text-[11px] font-semibold text-slate-950">
+                                  {t.listenNow}
+                                </Link>
+                              ) : null}
+                              <Link href={withLang(`/song/${item.id}`, lang)} className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200">
+                                Spotlight
+                              </Link>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-4">
+                  <h3 className="text-sm font-semibold text-brand-200">{t.weeklySongsShareReady}</h3>
+                  <div className="mt-3 space-y-3">
+                    {shareReadySongs.map((item) => {
+                      const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
+                      return (
+                        <article key={`share-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                          <p className="text-sm font-semibold text-slate-100">{songTitle}</p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {item.name} · {getDistrictLabel(item.district)}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Link href={withLang(`/song/${item.id}`, lang)} className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200">
+                              Spotlight
+                            </Link>
+                            <Link href={withLang(`/artists/${item.slug}`, lang)} className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200">
+                              {lang === "ms" ? "Profil artis" : "Artist profile"}
+                            </Link>
+                          </div>
+                          <div className="mt-2">
+                            <SongShareButtons compact shareUrl={`${appBaseUrl}/song/${item.id}`} songTitle={songTitle} artistName={item.name} />
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
@@ -812,30 +861,63 @@ export default async function Home({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
-          <h2 className="text-2xl font-semibold text-slate-100">{t.newsTitle}</h2>
-          <p className="text-sm text-slate-300">{t.newsSubtitle}</p>
+        <section className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-300">{t.newsBadge}</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-100">{t.newsTitle}</h2>
+              <p className="mt-1 text-sm text-slate-300">{t.newsSubtitle}</p>
+            </div>
+          </div>
           {newsItems.length === 0 ? <p className="text-sm text-slate-400">{t.newsEmpty}</p> : null}
-          <div className="grid gap-3 md:grid-cols-2">
-            {newsItems.map((item) => (
-              <article key={item.id} className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-                <p className="text-base font-semibold text-slate-100">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {(item.source || "Global") +
-                    " · " +
-                    new Date(item.publishedAt).toLocaleDateString(lang === "ms" ? "ms-MY" : "en-MY", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric"
-                    })}
+          {leadNewsItem ? (
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
+              <article className="rounded-2xl border border-brand-500/25 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.14),transparent_42%),linear-gradient(180deg,rgba(6,11,21,0.95),rgba(11,17,32,0.92))] p-6 shadow-[0_18px_36px_rgba(0,0,0,0.4)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-300">{t.newsLead}</p>
+                <h3 className="mt-3 text-2xl font-bold leading-tight text-slate-50">{leadNewsItem.title}</h3>
+                <p className="mt-3 text-xs text-slate-400">
+                  {(leadNewsItem.source || t.newsGlobal) + " · " + (formatShortDate(leadNewsItem.publishedAt, lang) || "")}
                 </p>
-                <p className="mt-2 text-sm text-slate-300">{item.summary || item.title}</p>
-                <Link href={item.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
+                <p className="mt-4 text-sm leading-7 text-slate-300">{leadNewsItem.summary || leadNewsItem.title}</p>
+                <Link href={leadNewsItem.url} target="_blank" rel="noreferrer" className="mt-5 inline-flex rounded-lg border border-brand-400/50 px-4 py-2 text-sm font-semibold text-brand-200 hover:border-brand-300">
                   {t.readMore}
                 </Link>
               </article>
-            ))}
-          </div>
+
+              <div className="space-y-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-4">
+                  <h3 className="text-sm font-semibold text-brand-200">{t.newsQuickHits}</h3>
+                  <div className="mt-3 space-y-3">
+                    {quickNewsItems.map((item) => (
+                      <article key={`quick-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                        <p className="text-sm font-semibold leading-6 text-slate-100">{item.title}</p>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {(item.source || t.newsGlobal) + " · " + (formatShortDate(item.publishedAt, lang) || "")}
+                        </p>
+                        <Link href={item.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200 hover:border-brand-300 hover:text-brand-200">
+                          {t.readMore}
+                        </Link>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+
+                {moreNewsItems.length > 0 ? (
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/75 p-4">
+                    <h3 className="text-sm font-semibold text-brand-200">{t.newsMoreCoverage}</h3>
+                    <div className="mt-3 grid gap-3">
+                      {moreNewsItems.map((item) => (
+                        <article key={`more-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                          <p className="text-sm font-semibold text-slate-100">{item.title}</p>
+                          <p className="mt-1 text-xs text-slate-400">{item.summary || item.title}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
