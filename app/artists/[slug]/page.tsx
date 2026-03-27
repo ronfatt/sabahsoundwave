@@ -53,6 +53,17 @@ export default async function ArtistProfile({
   const artist = await prisma.artist.findFirst({ where: { slug, status: "APPROVED" } });
   if (!artist) notFound();
 
+  try {
+    await prisma.artist.update({
+      where: { id: artist.id },
+      data: {
+        profileViewCount: { increment: 1 }
+      }
+    });
+  } catch {
+    // Keep profile render stable if schema is slightly behind.
+  }
+
   const youtubeEmbed = getYoutubeEmbedUrl(artist.youtubeUrl);
   const formattedReleaseDate = formatReleaseDate(artist.latestReleaseDate);
   const followersLabel =
@@ -107,27 +118,27 @@ export default async function ArtistProfile({
 
             <div className="flex flex-wrap gap-2">
               {artist.spotifyUrl ? (
-                <Link href={artist.spotifyUrl} target="_blank" className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">
+                <Link href={`/api/track/listen/${artist.id}?target=spotify`} target="_blank" className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">
                   {lang === "ms" ? "Buka di Spotify" : "Open on Spotify"}
                 </Link>
               ) : null}
               {artist.topTrackUrl ? (
-                <Link href={artist.topTrackUrl} target="_blank" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">
+                <Link href={`/api/track/listen/${artist.id}?target=top`} target="_blank" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">
                   {lang === "ms" ? "Dengar lagu popular" : "Listen top song"}
                 </Link>
               ) : null}
               {artist.latestReleaseUrl ? (
-                <Link href={artist.latestReleaseUrl} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
+                <Link href={`/api/track/listen/${artist.id}?target=latest`} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
                   {lang === "ms" ? "Buka keluaran terbaru" : "Open latest release"}
                 </Link>
               ) : null}
               {artist.appleMusicUrl ? (
-                <Link href={artist.appleMusicUrl} target="_blank" className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+                <Link href={`/api/track/listen/${artist.id}?target=apple`} target="_blank" className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
                   {lang === "ms" ? "Buka di Apple Music" : "Open on Apple Music"}
                 </Link>
               ) : null}
               {artist.youtubeUrl ? (
-                <Link href={artist.youtubeUrl} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
+                <Link href={`/api/track/listen/${artist.id}?target=youtube`} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
                   {lang === "ms" ? "Tonton di YouTube" : "Watch on YouTube"}
                 </Link>
               ) : null}

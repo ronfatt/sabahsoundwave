@@ -82,6 +82,10 @@ model Artist {
   starterAgreementAcceptedAt DateTime?
   starterAgreementVersion String?
   spotifyFollowers Int?
+  artistCardClickCount Int       @default(0)
+  profileViewCount Int           @default(0)
+  songSpotlightViewCount Int     @default(0)
+  songListenClickCount Int       @default(0)
   topTrackUrl     String?
   topTrackName    String?
   latestReleaseName String?
@@ -103,6 +107,8 @@ model Artist {
   @@index([verificationStatus])
   @@index([discoverySource])
   @@index([sabahConfidence])
+  @@index([profileViewCount])
+  @@index([songListenClickCount])
 }
 
 model DropEvent {

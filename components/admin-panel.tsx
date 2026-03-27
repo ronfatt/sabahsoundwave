@@ -26,6 +26,10 @@ type ArtistItem = {
   bio: string;
   aiSummary: string | null;
   spotifyFollowers: number | null;
+  artistCardClickCount: number;
+  profileViewCount: number;
+  songSpotlightViewCount: number;
+  songListenClickCount: number;
   submitTermsAcceptedAt: string | null;
   starterAgreementAcceptedAt: string | null;
   starterAgreementVersion: string | null;
@@ -191,6 +195,13 @@ export function AdminPanel({
     newsSyncRunning: lang === "ms" ? "News sedang sync..." : "News syncing...",
     newsSyncFailed: lang === "ms" ? "Sync News gagal" : "News sync failed",
     newsInsights: lang === "ms" ? "News Insights" : "News Insights",
+    performanceInsights: lang === "ms" ? "Artist & Song Insights" : "Artist & Song Insights",
+    topArtistProfiles: lang === "ms" ? "Profil artis paling banyak dilihat" : "Most viewed artist profiles",
+    topSongClicks: lang === "ms" ? "Klik dengar lagu terbanyak" : "Most clicked songs",
+    topSongSpotlights: lang === "ms" ? "Spotlight lagu paling banyak dibuka" : "Most viewed song spotlights",
+    profileViews: lang === "ms" ? "paparan profil" : "profile views",
+    spotlightViews: lang === "ms" ? "paparan spotlight" : "spotlight views",
+    analyticsEmpty: lang === "ms" ? "Belum ada data interaksi." : "No interaction data yet.",
     popularNews: lang === "ms" ? "Berita paling banyak diklik" : "Most-clicked news",
     newsByCategory: lang === "ms" ? "Pembahagian kategori" : "Category distribution",
     noNewsData: lang === "ms" ? "Belum ada data berita." : "No news data yet.",
@@ -750,6 +761,18 @@ export function AdminPanel({
   const totalArtistPages = Math.max(1, Math.ceil(filteredArtists.length / ARTISTS_PER_PAGE));
   const currentArtistPage = Math.min(artistPage, totalArtistPages);
   const pagedArtists = filteredArtists.slice((currentArtistPage - 1) * ARTISTS_PER_PAGE, currentArtistPage * ARTISTS_PER_PAGE);
+  const topArtistsByProfileViews = [...artists]
+    .filter((artist) => artist.profileViewCount > 0 || artist.artistCardClickCount > 0)
+    .sort((a, b) => b.profileViewCount - a.profileViewCount || b.artistCardClickCount - a.artistCardClickCount)
+    .slice(0, 5);
+  const topSongsByListenClicks = [...artists]
+    .filter((artist) => artist.songListenClickCount > 0)
+    .sort((a, b) => b.songListenClickCount - a.songListenClickCount)
+    .slice(0, 5);
+  const topSongSpotlights = [...artists]
+    .filter((artist) => artist.songSpotlightViewCount > 0)
+    .sort((a, b) => b.songSpotlightViewCount - a.songSpotlightViewCount)
+    .slice(0, 5);
   const topNewsItems = newsItems.slice(0, 5);
   const sortedNewsCategories = Object.entries(newsCategoryCounts).sort((a, b) => b[1] - a[1]);
 
@@ -760,6 +783,75 @@ export function AdminPanel({
   return (
     <section className="space-y-8">
       {statusMessage ? <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{statusMessage}</p> : null}
+
+      <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xl font-semibold">{t.performanceInsights}</h2>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {artists.length} artists tracked
+          </span>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-900">{t.topArtistProfiles}</p>
+            {topArtistsByProfileViews.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {topArtistsByProfileViews.map((artist) => (
+              <article key={`profile-${artist.id}`} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{artist.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {getDistrictLabel(artist.district)} · card clicks {artist.artistCardClickCount}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-900">{artist.profileViewCount}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.profileViews}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-900">{t.topSongClicks}</p>
+            {topSongsByListenClicks.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {topSongsByListenClicks.map((artist) => (
+              <article key={`listen-${artist.id}`} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{artist.topTrackName || artist.latestReleaseName || artist.name}</p>
+                    <p className="text-xs text-slate-500">{artist.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-900">{artist.songListenClickCount}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.clicks}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-900">{t.topSongSpotlights}</p>
+            {topSongSpotlights.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {topSongSpotlights.map((artist) => (
+              <article key={`spotlight-${artist.id}`} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{artist.topTrackName || artist.latestReleaseName || artist.name}</p>
+                    <p className="text-xs text-slate-500">{artist.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-900">{artist.songSpotlightViewCount}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.spotlightViews}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex items-center justify-between gap-2">

@@ -88,14 +88,14 @@ export default async function WeeklyDropDayPage({
                   ) : null}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {listenUrl ? (
-                      <Link href={listenUrl} target="_blank" className="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-slate-950">
+                      <Link href={`/api/track/listen/${song.id}`} target="_blank" className="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-slate-950">
                         {lang === "ms" ? "Dengar" : "Listen"}
                       </Link>
                     ) : null}
                     <Link href={withLang(`/song/${song.id}`, lang)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200">
                       {lang === "ms" ? "Kongsi" : "Share"}
                     </Link>
-                    <Link href={withLang(`/artists/${song.slug}`, lang)} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200">
+                    <Link href={`/api/track/artist/${song.id}/visit?lang=${lang}`} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200">
                       {lang === "ms" ? "Profil" : "Profile"}
                     </Link>
                   </div>

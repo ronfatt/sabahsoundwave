@@ -20,6 +20,17 @@ export default async function SongPage({
   const artist = await prisma.artist.findUnique({ where: { id } });
   if (!artist) notFound();
 
+  try {
+    await prisma.artist.update({
+      where: { id: artist.id },
+      data: {
+        songSpotlightViewCount: { increment: 1 }
+      }
+    });
+  } catch {
+    // Keep spotlight page render stable if schema is slightly behind.
+  }
+
   const songTitle = artist.topTrackName || artist.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
   const listenUrl = artist.topTrackUrl || artist.latestReleaseUrl || artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.sabahsoundwave.com";
@@ -43,7 +54,7 @@ export default async function SongPage({
 
           <div className="flex flex-wrap gap-2">
             {listenUrl ? (
-              <Link href={listenUrl} target="_blank" className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-slate-950">
+              <Link href={`/api/track/listen/${artist.id}`} target="_blank" className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-slate-950">
                 {lang === "ms" ? "Dengar sekarang" : "Listen now"}
               </Link>
             ) : null}

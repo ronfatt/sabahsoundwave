@@ -58,16 +58,16 @@ export default async function DropPage({
                 </div>
                 <p className="line-clamp-3 text-sm text-slate-700">{artist.bio}</p>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={withLang(`/artists/${artist.slug}`, lang)} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+                  <Link href={`/api/track/artist/${artist.id}/visit?lang=${lang}`} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
                     {lang === "ms" ? "Lihat profil" : "View profile"}
                   </Link>
                   {artist.spotifyUrl ? (
-                    <Link href={artist.spotifyUrl} target="_blank" className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">
+                    <Link href={`/api/track/listen/${artist.id}?target=spotify`} target="_blank" className="rounded-lg bg-green-700 px-3 py-2 text-sm font-semibold text-white">
                       Spotify
                     </Link>
                   ) : null}
                   {artist.youtubeUrl ? (
-                    <Link href={artist.youtubeUrl} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
+                    <Link href={`/api/track/listen/${artist.id}?target=youtube`} target="_blank" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800">
                       YouTube
                     </Link>
                   ) : null}

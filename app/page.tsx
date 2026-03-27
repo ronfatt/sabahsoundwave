@@ -81,6 +81,17 @@ function buildHomeUrl({
   return query ? `/?${query}` : "/";
 }
 
+function buildTrackedArtistUrl(id: string, lang: "en" | "ms") {
+  return `/api/track/artist/${id}/visit?lang=${lang}`;
+}
+
+function buildTrackedListenUrl(
+  id: string,
+  target: "top" | "latest" | "spotify" | "apple" | "youtube" | "default" = "default"
+) {
+  return target === "default" ? `/api/track/listen/${id}` : `/api/track/listen/${id}?target=${target}`;
+}
+
 export default async function Home({
   searchParams
 }: {
@@ -729,7 +740,7 @@ export default async function Home({
                           </div>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {listenUrl ? (
-                              <Link href={listenUrl} target="_blank" className="rounded-md bg-brand-500 px-2 py-1 text-[11px] font-semibold text-slate-950">
+                              <Link href={buildTrackedListenUrl(item.id)} target="_blank" className="rounded-md bg-brand-500 px-2 py-1 text-[11px] font-semibold text-slate-950">
                                 {t.listenNow}
                               </Link>
                             ) : null}
@@ -787,14 +798,7 @@ export default async function Home({
                     weeklyLeadSong.appleMusicUrl ||
                     weeklyLeadSong.youtubeUrl) ? (
                     <Link
-                      href={
-                        weeklyLeadSong.topTrackUrl ||
-                        weeklyLeadSong.latestReleaseUrl ||
-                        weeklyLeadSong.spotifyUrl ||
-                        weeklyLeadSong.appleMusicUrl ||
-                        weeklyLeadSong.youtubeUrl ||
-                        "#"
-                      }
+                      href={buildTrackedListenUrl(weeklyLeadSong.id)}
                       target="_blank"
                       className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-slate-950"
                     >
@@ -804,7 +808,7 @@ export default async function Home({
                   <Link href={withLang(`/song/${weeklyLeadSong.id}`, lang)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100">
                     Spotlight
                   </Link>
-                  <Link href={withLang(`/artists/${weeklyLeadSong.slug}`, lang)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300">
+                  <Link href={buildTrackedArtistUrl(weeklyLeadSong.id, lang)} className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300">
                     {lang === "ms" ? "Profil artis" : "Artist profile"}
                   </Link>
                 </div>
@@ -841,7 +845,7 @@ export default async function Home({
                             </div>
                             <div className="flex flex-col gap-2">
                               {listenUrl ? (
-                                <Link href={listenUrl} target="_blank" className="rounded-md bg-brand-500 px-2 py-1 text-[11px] font-semibold text-slate-950">
+                                <Link href={buildTrackedListenUrl(item.id)} target="_blank" className="rounded-md bg-brand-500 px-2 py-1 text-[11px] font-semibold text-slate-950">
                                   {t.listenNow}
                                 </Link>
                               ) : null}
@@ -871,7 +875,7 @@ export default async function Home({
                             <Link href={withLang(`/song/${item.id}`, lang)} className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200">
                               Spotlight
                             </Link>
-                            <Link href={withLang(`/artists/${item.slug}`, lang)} className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200">
+                            <Link href={buildTrackedArtistUrl(item.id, lang)} className="rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200">
                               {lang === "ms" ? "Profil artis" : "Artist profile"}
                             </Link>
                           </div>

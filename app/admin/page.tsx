@@ -27,6 +27,10 @@ type ArtistItem = {
   bio: string;
   aiSummary: string | null;
   spotifyFollowers: number | null;
+  artistCardClickCount: number;
+  profileViewCount: number;
+  songSpotlightViewCount: number;
+  songListenClickCount: number;
   submitTermsAcceptedAt: string | null;
   starterAgreementAcceptedAt: string | null;
   starterAgreementVersion: string | null;

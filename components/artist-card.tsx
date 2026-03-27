@@ -1,8 +1,9 @@
 import { getDistrictLabel } from "@/lib/district";
-import { Lang, withLang } from "@/lib/i18n";
+import { Lang } from "@/lib/i18n";
 import Link from "next/link";
 
 type ArtistCardProps = {
+  id: string;
   slug: string;
   name: string;
   district: string | null;
@@ -47,6 +48,7 @@ function PlatformIcon({ kind }: { kind: "spotify" | "youtube" | "apple" }) {
 }
 
 export function ArtistCard({
+  id,
   slug,
   name,
   district,
@@ -94,6 +96,8 @@ export function ArtistCard({
     latestReleaseDate && !Number.isNaN(new Date(latestReleaseDate).getTime())
       ? new Date(latestReleaseDate).toLocaleDateString("en-MY", { year: "numeric", month: "short", day: "numeric" })
       : null;
+  const trackedListenUrl = listenUrl ? `/api/track/listen/${id}` : null;
+  const trackedArtistUrl = `/api/track/artist/${id}/visit?lang=${lang}`;
 
   return (
     <article
@@ -169,17 +173,17 @@ export function ArtistCard({
 
         <div className="flex flex-wrap gap-2">
           {listenUrl ? (
-            <a
-              href={listenUrl}
+            <Link
+              href={trackedListenUrl || "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-brand-400"
             >
               {lang === "ms" ? "Dengar" : "Listen"}
-            </a>
+            </Link>
           ) : null}
           <Link
-            href={withLang(`/artists/${slug}`, lang)}
+            href={trackedArtistUrl}
             className="inline-flex rounded-lg border border-slate-500/70 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-brand-300 hover:text-brand-200"
           >
             {lang === "ms" ? "Lihat profil" : "View Profile"}
