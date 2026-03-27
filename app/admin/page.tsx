@@ -110,6 +110,23 @@ type TopPageItem = {
   views: number;
 };
 
+type VisitorTrendPoint = {
+  date: string;
+  label: string;
+  pageViews: number;
+  uniqueVisitors: number;
+};
+
+type TopArtist7dItem = {
+  id: string;
+  name: string;
+  slug: string;
+  district: DistrictValue;
+  profileViews: number;
+  cardClicks: number;
+  totalInteractions: number;
+};
+
 type TrendingSongItem = {
   id: string;
   name: string;
@@ -118,6 +135,8 @@ type TrendingSongItem = {
   topTrackName: string | null;
   latestReleaseName: string | null;
   clicks: number;
+  spotlightViews: number;
+  totalInteractions: number;
 };
 
 type AdminData = {
@@ -130,6 +149,8 @@ type AdminData = {
   trafficOverview: TrafficOverview;
   engagementOverview: EngagementOverview;
   topPages: TopPageItem[];
+  visitorTrend14d: VisitorTrendPoint[];
+  topArtists7d: TopArtist7dItem[];
   trendingSongs7d: TrendingSongItem[];
 };
 
@@ -255,6 +276,8 @@ export default function AdminPage() {
             initialTrafficOverview={data.trafficOverview}
             initialEngagementOverview={data.engagementOverview}
             initialTopPages={data.topPages}
+            initialVisitorTrend14d={data.visitorTrend14d}
+            initialTopArtists7d={data.topArtists7d}
             initialTrendingSongs7d={data.trendingSongs7d}
           />
         ) : null}

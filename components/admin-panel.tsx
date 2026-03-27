@@ -109,6 +109,23 @@ type TopPageItem = {
   views: number;
 };
 
+type VisitorTrendPoint = {
+  date: string;
+  label: string;
+  pageViews: number;
+  uniqueVisitors: number;
+};
+
+type TopArtist7dItem = {
+  id: string;
+  name: string;
+  slug: string;
+  district: DistrictValue;
+  profileViews: number;
+  cardClicks: number;
+  totalInteractions: number;
+};
+
 type TrendingSongItem = {
   id: string;
   name: string;
@@ -117,6 +134,8 @@ type TrendingSongItem = {
   topTrackName: string | null;
   latestReleaseName: string | null;
   clicks: number;
+  spotlightViews: number;
+  totalInteractions: number;
 };
 
 type SubmissionAiInsight = {
@@ -141,6 +160,8 @@ export function AdminPanel({
   initialTrafficOverview,
   initialEngagementOverview,
   initialTopPages,
+  initialVisitorTrend14d,
+  initialTopArtists7d,
   initialTrendingSongs7d
 }: {
   lang: Lang;
@@ -153,6 +174,8 @@ export function AdminPanel({
   initialTrafficOverview: TrafficOverview;
   initialEngagementOverview: EngagementOverview;
   initialTopPages: TopPageItem[];
+  initialVisitorTrend14d: VisitorTrendPoint[];
+  initialTopArtists7d: TopArtist7dItem[];
   initialTrendingSongs7d: TrendingSongItem[];
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
@@ -164,6 +187,8 @@ export function AdminPanel({
   const [trafficOverview, setTrafficOverview] = useState(initialTrafficOverview);
   const [engagementOverview, setEngagementOverview] = useState(initialEngagementOverview);
   const [topPages, setTopPages] = useState(initialTopPages);
+  const [visitorTrend14d, setVisitorTrend14d] = useState(initialVisitorTrend14d);
+  const [topArtists7d, setTopArtists7d] = useState(initialTopArtists7d);
   const [trendingSongs7d, setTrendingSongs7d] = useState(initialTrendingSongs7d);
   const [statusMessage, setStatusMessage] = useState("");
   const [dropTitle, setDropTitle] = useState("");
@@ -240,6 +265,7 @@ export function AdminPanel({
     performanceInsights: lang === "ms" ? "Artist & Song Insights" : "Artist & Song Insights",
     trafficOverview: lang === "ms" ? "Traffic Overview" : "Traffic Overview",
     engagementOverview: lang === "ms" ? "Engagement totals" : "Engagement totals",
+    visitorTrend: lang === "ms" ? "Trend pelawat 14 hari" : "Visitor trend (14d)",
     totalPageViews: lang === "ms" ? "Jumlah page views" : "Total page views",
     uniqueVisitors: lang === "ms" ? "Pelawat unik" : "Unique visitors",
     pageViews7d: lang === "ms" ? "Page views 7 hari" : "Page views (7d)",
@@ -255,8 +281,13 @@ export function AdminPanel({
     topArtistProfiles: lang === "ms" ? "Profil artis paling banyak dilihat" : "Most viewed artist profiles",
     topSongClicks: lang === "ms" ? "Klik dengar lagu terbanyak" : "Most clicked songs",
     topSongSpotlights: lang === "ms" ? "Spotlight lagu paling banyak dibuka" : "Most viewed song spotlights",
+    topArtists7d: lang === "ms" ? "Artis paling popular 7 hari" : "Top artists (7d)",
+    topSongs7d: lang === "ms" ? "Lagu paling popular 7 hari" : "Top songs (7d)",
     profileViews: lang === "ms" ? "paparan profil" : "profile views",
     spotlightViews: lang === "ms" ? "paparan spotlight" : "spotlight views",
+    totalInteractions: lang === "ms" ? "jumlah interaksi" : "total interactions",
+    cardClicksLabel: lang === "ms" ? "klik kad" : "card clicks",
+    listensLabel: lang === "ms" ? "klik dengar" : "listen clicks",
     analyticsEmpty: lang === "ms" ? "Belum ada data interaksi." : "No interaction data yet.",
     openPage: lang === "ms" ? "Buka halaman" : "Open page",
     popularNews: lang === "ms" ? "Berita paling banyak diklik" : "Most-clicked news",
@@ -404,6 +435,8 @@ export function AdminPanel({
     trafficOverview?: TrafficOverview;
     engagementOverview?: EngagementOverview;
     topPages?: TopPageItem[];
+    visitorTrend14d?: VisitorTrendPoint[];
+    topArtists7d?: TopArtist7dItem[];
     trendingSongs7d?: TrendingSongItem[];
   }) {
     if (dashboard.submissions) setSubmissions(dashboard.submissions);
@@ -415,6 +448,8 @@ export function AdminPanel({
     if (dashboard.trafficOverview) setTrafficOverview(dashboard.trafficOverview);
     if (dashboard.engagementOverview) setEngagementOverview(dashboard.engagementOverview);
     if (dashboard.topPages) setTopPages(dashboard.topPages);
+    if (dashboard.visitorTrend14d) setVisitorTrend14d(dashboard.visitorTrend14d);
+    if (dashboard.topArtists7d) setTopArtists7d(dashboard.topArtists7d);
     if (dashboard.trendingSongs7d) setTrendingSongs7d(dashboard.trendingSongs7d);
   }
 
@@ -844,6 +879,7 @@ export function AdminPanel({
     .slice(0, 5);
   const topNewsItems = newsItems.slice(0, 5);
   const sortedNewsCategories = Object.entries(newsCategoryCounts).sort((a, b) => b[1] - a[1]);
+  const visitorTrendMax = Math.max(1, ...visitorTrend14d.map((item) => Math.max(item.pageViews, item.uniqueVisitors)));
 
   useEffect(() => {
     setArtistPage(1);
@@ -915,29 +951,51 @@ export function AdminPanel({
           </div>
 
           <div className="space-y-3 rounded-xl border border-slate-200 p-3">
-            <p className="text-sm font-semibold text-slate-900">{t.trendingSongs7d}</p>
-            {trendingSongs7d.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
-            {trendingSongs7d.map((item) => (
-              <article key={item.id} className="rounded-lg bg-slate-50 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">{item.topTrackName || item.latestReleaseName || item.name}</p>
-                    <p className="text-xs text-slate-500">
-                      {item.name} · {getDistrictLabel(item.district)}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-lg font-bold text-slate-900">{item.clicks}</p>
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.clicks}</p>
-                  </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-900">{t.visitorTrend}</p>
+              <span className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                {visitorTrend14d.length} days
+              </span>
+            </div>
+            {visitorTrend14d.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {visitorTrend14d.length > 0 ? (
+              <div className="rounded-lg bg-slate-50 p-4">
+                <div className="flex h-48 items-end gap-2">
+                  {visitorTrend14d.map((point) => {
+                    const pageViewsHeight = `${Math.max(8, (point.pageViews / visitorTrendMax) * 100)}%`;
+                    const visitorsHeight = `${Math.max(6, (point.uniqueVisitors / visitorTrendMax) * 100)}%`;
+
+                    return (
+                      <div key={point.date} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                        <div className="flex h-full w-full items-end justify-center gap-1">
+                          <div
+                            className="w-2 rounded-t-full bg-brand-500/85"
+                            style={{ height: point.pageViews > 0 ? pageViewsHeight : "4px" }}
+                            title={`${point.label}: ${point.pageViews} ${t.pageViewsLabel}`}
+                          />
+                          <div
+                            className="w-2 rounded-t-full bg-slate-400"
+                            style={{ height: point.uniqueVisitors > 0 ? visitorsHeight : "4px" }}
+                            title={`${point.label}: ${point.uniqueVisitors} ${t.uniqueVisitors.toLowerCase()}`}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-500">{point.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="mt-2">
-                  <Link href={withLang(`/song/${item.id}`, lang)} className="text-xs font-semibold text-brand-700 hover:text-brand-600">
-                    Spotlight
-                  </Link>
+                <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-600">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-brand-500" />
+                    {t.totalPageViews}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-slate-400" />
+                    {t.uniqueVisitors}
+                  </span>
                 </div>
-              </article>
-            ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -950,6 +1008,62 @@ export function AdminPanel({
           </span>
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-900">{t.topArtists7d}</p>
+            {topArtists7d.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {topArtists7d.map((artist, index) => (
+              <article key={`artist-7d-${artist.id}`} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      #{index + 1} {artist.name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {getDistrictLabel(artist.district)} · {artist.profileViews} {t.profileViews} · {artist.cardClicks} {t.cardClicksLabel}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-900">{artist.totalInteractions}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.totalInteractions}</p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <Link href={withLang(`/artists/${artist.slug}`, lang)} className="text-xs font-semibold text-brand-700 hover:text-brand-600">
+                    {t.openPublic}
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-900">{t.topSongs7d}</p>
+            {trendingSongs7d.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {trendingSongs7d.map((item, index) => (
+              <article key={`song-7d-${item.id}`} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      #{index + 1} {item.topTrackName || item.latestReleaseName || item.name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {item.name} · {item.clicks} {t.listensLabel} · {item.spotlightViews} {t.spotlightViews}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-slate-900">{item.totalInteractions}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.totalInteractions}</p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <Link href={withLang(`/song/${item.id}`, lang)} className="text-xs font-semibold text-brand-700 hover:text-brand-600">
+                    Spotlight
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+
           <div className="space-y-3 rounded-xl border border-slate-200 p-3">
             <p className="text-sm font-semibold text-slate-900">{t.topArtistProfiles}</p>
             {topArtistsByProfileViews.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
@@ -970,7 +1084,9 @@ export function AdminPanel({
               </article>
             ))}
           </div>
+        </div>
 
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3 rounded-xl border border-slate-200 p-3">
             <p className="text-sm font-semibold text-slate-900">{t.topSongClicks}</p>
             {topSongsByListenClicks.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
