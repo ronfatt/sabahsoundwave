@@ -20,6 +20,89 @@ export const metadata: Metadata = {
     "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful."
 };
 
+function getMalaysiaDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kuala_Lumpur",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "00";
+  const day = parts.find((part) => part.type === "day")?.value ?? "00";
+
+  return `${year}-${month}-${day}`;
+}
+
+function hashString(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function pickDailyFeaturedArtists<
+  T extends {
+    id: string;
+    district: string;
+    coverImageUrl: string | null;
+    bio: string;
+    topTrackUrl: string | null;
+    latestReleaseUrl: string | null;
+    spotifyUrl: string | null;
+    appleMusicUrl: string | null;
+    youtubeUrl: string | null;
+    spotifyFollowers: number | null;
+    profileViewCount: number;
+    songListenClickCount: number;
+  }
+>(artists: T[], count: number, dateKey: string) {
+  const scored = artists
+    .map((artist) => {
+      const completenessScore =
+        (artist.coverImageUrl ? 20 : 0) +
+        (artist.bio?.trim() ? 12 : 0) +
+        (artist.topTrackUrl ? 14 : 0) +
+        (artist.latestReleaseUrl ? 10 : 0) +
+        (artist.spotifyUrl ? 10 : 0) +
+        (artist.appleMusicUrl ? 6 : 0) +
+        (artist.youtubeUrl ? 8 : 0) +
+        Math.min(12, Math.floor((artist.spotifyFollowers ?? 0) / 5000)) +
+        Math.min(10, artist.profileViewCount) +
+        Math.min(8, artist.songListenClickCount);
+
+      const dailyRandom = hashString(`${dateKey}:${artist.id}`) % 1000;
+
+      return {
+        artist,
+        score: completenessScore * 1000 + dailyRandom
+      };
+    })
+    .sort((left, right) => right.score - left.score);
+
+  const selected: T[] = [];
+  const usedDistricts = new Set<string>();
+
+  for (const item of scored) {
+    if (selected.length >= count) break;
+    if (usedDistricts.has(item.artist.district) && scored.length > count) continue;
+    selected.push(item.artist);
+    usedDistricts.add(item.artist.district);
+  }
+
+  if (selected.length < count) {
+    for (const item of scored) {
+      if (selected.length >= count) break;
+      if (selected.some((artist) => artist.id === item.artist.id)) continue;
+      selected.push(item.artist);
+    }
+  }
+
+  return selected.slice(0, count);
+}
+
 function formatShortDate(value: Date | string | null | undefined, lang: "en" | "ms") {
   if (!value) return null;
   const date = new Date(value);
@@ -102,6 +185,7 @@ export default async function Home({
   const district = parseDistrict(params.district);
   const genre = params.genre;
   const activeNewsCategory = parseNewsCategory(params.newsCategory);
+  const todayKey = getMalaysiaDateKey();
 
   const filter = {
     status: "APPROVED" as const,
@@ -110,7 +194,6 @@ export default async function Home({
   };
 
   let featured: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
-  let hasManualFeatured = false;
   let latest: Awaited<ReturnType<typeof prisma.artist.findMany>> = [];
   let districtCounts: Array<{ district: string; _count: { district: number } }> = [];
   let nextDropEvent: {
@@ -213,8 +296,7 @@ export default async function Home({
       ]
     };
 
-    const [f, l, d, n, c, dropCount, recentSongs, fallbackSongs, weeklySongs, viralRecent, viralFallback] = await Promise.all([
-      prisma.artist.findMany({ where: { ...filter, featured: true }, orderBy: { updatedAt: "desc" }, take: 4 }),
+    const [l, d, n, c, dropCount, recentSongs, fallbackSongs, weeklySongs, viralRecent, viralFallback, spotlightPool] = await Promise.all([
       prisma.artist.findMany({ where: filter, orderBy: { createdAt: "desc" }, take: 8 }),
       prisma.artist.groupBy({ by: ["district"], where: { status: "APPROVED" }, _count: { district: true } }),
       prisma.dropEvent.findFirst({
@@ -324,10 +406,17 @@ export default async function Home({
         },
         orderBy: [{ lastSpotifySyncedAt: "desc" }, { sabahConfidence: "desc" }],
         take: 40
+      }),
+      prisma.artist.findMany({
+        where: filter,
+        orderBy: [{ profileViewCount: "desc" }, { songListenClickCount: "desc" }, { updatedAt: "desc" }],
+        take: 80
       })
     ]);
-    hasManualFeatured = f.length > 0;
-    featured = hasManualFeatured ? f : l.slice(0, 4);
+    featured = pickDailyFeaturedArtists(spotlightPool, 4, todayKey);
+    if (featured.length === 0) {
+      featured = l.slice(0, 4);
+    }
     latest = l;
     districtCounts = d;
     nextDropEvent = n;
@@ -451,7 +540,10 @@ export default async function Home({
         : "Short answers on how Sabah Soundwave improves AI visibility for your brand.",
     featured: lang === "ms" ? "Spotlight Artis Pilihan" : "Featured Spotlight",
     featuredEmpty: lang === "ms" ? "Tiada artis untuk penapis ini." : "No artists for this filter yet.",
-    featuredFallback: lang === "ms" ? "Tiada manual featured lagi. Paparan auto dari artis terbaru." : "No manual featured yet. Showing latest approved artists.",
+    featuredFallback:
+      lang === "ms"
+        ? "Pilihan AI bertukar setiap hari berdasarkan profil lengkap, pautan aktif, dan campuran daerah Sabah."
+        : "AI daily picks rotate every day based on profile quality, active music links, and a balanced Sabah district mix.",
     latest: lang === "ms" ? "Artis Diluluskan Terkini" : "Latest approved artists",
     songsSpotlight:
       lang === "ms"
@@ -588,7 +680,6 @@ export default async function Home({
     { label: lang === "ms" ? "Drop Akan Datang" : "Upcoming Drops", value: upcomingDropCount }
   ];
 
-  const todayKey = new Date().toISOString().slice(0, 10);
   const dailyPick =
     dailyCandidates.length > 0
       ? dailyCandidates[
@@ -744,7 +835,7 @@ export default async function Home({
 
         <section className="space-y-4 rounded-2xl border border-brand-500/30 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.14),transparent_40%),linear-gradient(180deg,#060b15_0%,#0b1120_100%)] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
           <h2 className="text-3xl font-bold text-white">{t.featured}</h2>
-          {!hasManualFeatured && featured.length > 0 ? <p className="text-xs text-brand-200">{t.featuredFallback}</p> : null}
+          {featured.length > 0 ? <p className="text-xs text-brand-200">{t.featuredFallback}</p> : null}
           {featured.length === 0 ? (
             <div className="rounded-xl border border-dashed border-brand-500/40 bg-slate-900/50 p-6 text-center">
               <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-500/15 text-brand-200">
