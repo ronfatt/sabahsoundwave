@@ -19,6 +19,8 @@ export const metadata: Metadata = {
     "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful."
 };
 
+type NewsCategory = "new-release" | "artist-update" | "festival" | "interview" | "industry";
+
 function formatShortDate(value: Date | string | null | undefined, lang: "en" | "ms") {
   if (!value) return null;
   const date = new Date(value);
@@ -28,6 +30,54 @@ function formatShortDate(value: Date | string | null | undefined, lang: "en" | "
     month: "short",
     day: "numeric"
   });
+}
+
+function classifyNewsCategory(title: string, summary?: string | null): NewsCategory {
+  const haystack = `${title} ${summary || ""}`.toLowerCase();
+
+  if (/(festival|concert|tour|showcase|live|gig|event|lineup)/.test(haystack)) {
+    return "festival";
+  }
+  if (/(interview|q&a|behind the scenes|exclusive|talks|speaks|opens up)/.test(haystack)) {
+    return "interview";
+  }
+  if (/(single|album|ep|track|song|release|drops|debut|music video|mv|video rasmi)/.test(haystack)) {
+    return "new-release";
+  }
+  if (/(joins|signs|collab|collaboration|milestone|wins|award|nominated|announce|returns)/.test(haystack)) {
+    return "artist-update";
+  }
+  return "industry";
+}
+
+function getNewsCategoryMeta(category: NewsCategory, lang: "en" | "ms") {
+  switch (category) {
+    case "new-release":
+      return {
+        label: lang === "ms" ? "Rilisan Baru" : "New Release",
+        className: "border-emerald-400/35 bg-emerald-400/10 text-emerald-200"
+      };
+    case "artist-update":
+      return {
+        label: lang === "ms" ? "Kemas Kini Artis" : "Artist Update",
+        className: "border-sky-400/35 bg-sky-400/10 text-sky-200"
+      };
+    case "festival":
+      return {
+        label: lang === "ms" ? "Festival / Acara" : "Festival / Event",
+        className: "border-fuchsia-400/35 bg-fuchsia-400/10 text-fuchsia-200"
+      };
+    case "interview":
+      return {
+        label: lang === "ms" ? "Temu Bual" : "Interview",
+        className: "border-amber-400/35 bg-amber-400/10 text-amber-200"
+      };
+    default:
+      return {
+        label: lang === "ms" ? "Industri" : "Industry",
+        className: "border-slate-500/35 bg-slate-500/10 text-slate-200"
+      };
+  }
 }
 
 export default async function Home({
@@ -873,6 +923,13 @@ export default async function Home({
           {leadNewsItem ? (
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
               <article className="rounded-2xl border border-brand-500/25 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.14),transparent_42%),linear-gradient(180deg,rgba(6,11,21,0.95),rgba(11,17,32,0.92))] p-6 shadow-[0_18px_36px_rgba(0,0,0,0.4)]">
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                    getNewsCategoryMeta(classifyNewsCategory(leadNewsItem.title, leadNewsItem.summary), lang).className
+                  }`}
+                >
+                  {getNewsCategoryMeta(classifyNewsCategory(leadNewsItem.title, leadNewsItem.summary), lang).label}
+                </span>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-300">{t.newsLead}</p>
                 <h3 className="mt-3 text-2xl font-bold leading-tight text-slate-50">{leadNewsItem.title}</h3>
                 <p className="mt-3 text-xs text-slate-400">
@@ -890,6 +947,15 @@ export default async function Home({
                   <div className="mt-3 space-y-3">
                     {quickNewsItems.map((item) => (
                       <article key={`quick-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                        <div className="mb-2">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                              getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).className
+                            }`}
+                          >
+                            {getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).label}
+                          </span>
+                        </div>
                         <p className="text-sm font-semibold leading-6 text-slate-100">{item.title}</p>
                         <p className="mt-1 text-[11px] text-slate-500">
                           {(item.source || t.newsGlobal) + " · " + (formatShortDate(item.publishedAt, lang) || "")}
@@ -908,6 +974,15 @@ export default async function Home({
                     <div className="mt-3 grid gap-3">
                       {moreNewsItems.map((item) => (
                         <article key={`more-${item.id}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                          <div className="mb-2">
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                                getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).className
+                              }`}
+                            >
+                              {getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).label}
+                            </span>
+                          </div>
                           <p className="text-sm font-semibold text-slate-100">{item.title}</p>
                           <p className="mt-1 text-xs text-slate-400">{item.summary || item.title}</p>
                         </article>
