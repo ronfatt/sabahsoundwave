@@ -1,5 +1,6 @@
 import { getArtistSoundSignature } from "@/lib/ai-assist";
 import { Navbar } from "@/components/navbar";
+import { ViewTracker } from "@/components/view-tracker";
 import { getDistrictLabel } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
@@ -53,17 +54,6 @@ export default async function ArtistProfile({
   const artist = await prisma.artist.findFirst({ where: { slug, status: "APPROVED" } });
   if (!artist) notFound();
 
-  try {
-    await prisma.artist.update({
-      where: { id: artist.id },
-      data: {
-        profileViewCount: { increment: 1 }
-      }
-    });
-  } catch {
-    // Keep profile render stable if schema is slightly behind.
-  }
-
   const youtubeEmbed = getYoutubeEmbedUrl(artist.youtubeUrl);
   const formattedReleaseDate = formatReleaseDate(artist.latestReleaseDate);
   const followersLabel =
@@ -86,6 +76,7 @@ export default async function ArtistProfile({
   return (
     <main>
       <Navbar />
+      <ViewTracker endpoint={`/api/analytics/view/artist/${artist.id}`} />
       <section className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 md:px-6">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div

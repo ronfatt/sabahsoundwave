@@ -89,6 +89,36 @@ type NewsItem = {
   lastClickedAt: string | null;
 };
 
+type TrafficOverview = {
+  totalPageViews: number;
+  uniqueVisitors: number;
+  pageViews7d: number;
+  uniqueVisitors7d: number;
+};
+
+type EngagementOverview = {
+  artistCardClicks: number;
+  artistProfileViews: number;
+  songListenClicks: number;
+  songSpotlightViews: number;
+  newsClicks: number;
+};
+
+type TopPageItem = {
+  path: string;
+  views: number;
+};
+
+type TrendingSongItem = {
+  id: string;
+  name: string;
+  slug: string;
+  district: DistrictValue;
+  topTrackName: string | null;
+  latestReleaseName: string | null;
+  clicks: number;
+};
+
 type SubmissionAiInsight = {
   recommendedPackage: "Starter" | "Pro" | "Label";
   tags: string[];
@@ -107,7 +137,11 @@ export function AdminPanel({
   initialDropEvents,
   initialYoutubeCandidates,
   initialNewsItems,
-  initialNewsCategoryCounts
+  initialNewsCategoryCounts,
+  initialTrafficOverview,
+  initialEngagementOverview,
+  initialTopPages,
+  initialTrendingSongs7d
 }: {
   lang: Lang;
   initialSubmissions: ArtistItem[];
@@ -116,6 +150,10 @@ export function AdminPanel({
   initialYoutubeCandidates: YoutubeCandidateItem[];
   initialNewsItems: NewsItem[];
   initialNewsCategoryCounts: Record<string, number>;
+  initialTrafficOverview: TrafficOverview;
+  initialEngagementOverview: EngagementOverview;
+  initialTopPages: TopPageItem[];
+  initialTrendingSongs7d: TrendingSongItem[];
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [artists, setArtists] = useState(initialArtists);
@@ -123,6 +161,10 @@ export function AdminPanel({
   const [youtubeCandidates, setYoutubeCandidates] = useState(initialYoutubeCandidates);
   const [newsItems, setNewsItems] = useState(initialNewsItems);
   const [newsCategoryCounts, setNewsCategoryCounts] = useState(initialNewsCategoryCounts);
+  const [trafficOverview, setTrafficOverview] = useState(initialTrafficOverview);
+  const [engagementOverview, setEngagementOverview] = useState(initialEngagementOverview);
+  const [topPages, setTopPages] = useState(initialTopPages);
+  const [trendingSongs7d, setTrendingSongs7d] = useState(initialTrendingSongs7d);
   const [statusMessage, setStatusMessage] = useState("");
   const [dropTitle, setDropTitle] = useState("");
   const [dropDate, setDropDate] = useState("");
@@ -196,12 +238,27 @@ export function AdminPanel({
     newsSyncFailed: lang === "ms" ? "Sync News gagal" : "News sync failed",
     newsInsights: lang === "ms" ? "News Insights" : "News Insights",
     performanceInsights: lang === "ms" ? "Artist & Song Insights" : "Artist & Song Insights",
+    trafficOverview: lang === "ms" ? "Traffic Overview" : "Traffic Overview",
+    engagementOverview: lang === "ms" ? "Engagement totals" : "Engagement totals",
+    totalPageViews: lang === "ms" ? "Jumlah page views" : "Total page views",
+    uniqueVisitors: lang === "ms" ? "Pelawat unik" : "Unique visitors",
+    pageViews7d: lang === "ms" ? "Page views 7 hari" : "Page views (7d)",
+    visitors7d: lang === "ms" ? "Pelawat unik 7 hari" : "Unique visitors (7d)",
+    hotPages: lang === "ms" ? "Halaman paling popular" : "Hot pages",
+    trendingSongs7d: lang === "ms" ? "Trending lagu 7 hari" : "Trending songs (7d)",
+    pageViewsLabel: lang === "ms" ? "paparan" : "views",
+    artistCardClicks: lang === "ms" ? "Klik kad artis" : "Artist card clicks",
+    artistProfileViewsTotal: lang === "ms" ? "Jumlah paparan profil artis" : "Artist profile views",
+    songListenClicksTotal: lang === "ms" ? "Jumlah klik dengar lagu" : "Song listen clicks",
+    songSpotlightViewsTotal: lang === "ms" ? "Jumlah paparan spotlight lagu" : "Song spotlight views",
+    newsClicksTotal: lang === "ms" ? "Jumlah klik berita" : "News clicks",
     topArtistProfiles: lang === "ms" ? "Profil artis paling banyak dilihat" : "Most viewed artist profiles",
     topSongClicks: lang === "ms" ? "Klik dengar lagu terbanyak" : "Most clicked songs",
     topSongSpotlights: lang === "ms" ? "Spotlight lagu paling banyak dibuka" : "Most viewed song spotlights",
     profileViews: lang === "ms" ? "paparan profil" : "profile views",
     spotlightViews: lang === "ms" ? "paparan spotlight" : "spotlight views",
     analyticsEmpty: lang === "ms" ? "Belum ada data interaksi." : "No interaction data yet.",
+    openPage: lang === "ms" ? "Buka halaman" : "Open page",
     popularNews: lang === "ms" ? "Berita paling banyak diklik" : "Most-clicked news",
     newsByCategory: lang === "ms" ? "Pembahagian kategori" : "Category distribution",
     noNewsData: lang === "ms" ? "Belum ada data berita." : "No news data yet.",
@@ -335,6 +392,30 @@ export function AdminPanel({
     if (value === "festival") return lang === "ms" ? "Festival / Acara" : "Festival / Event";
     if (value === "interview") return lang === "ms" ? "Temu Bual" : "Interview";
     return lang === "ms" ? "Industri" : "Industry";
+  }
+
+  function applyDashboardData(dashboard: {
+    submissions?: ArtistItem[];
+    artists?: ArtistItem[];
+    dropEvents?: DropEventItem[];
+    youtubeCandidates?: YoutubeCandidateItem[];
+    newsItems?: NewsItem[];
+    newsCategoryCounts?: Record<string, number>;
+    trafficOverview?: TrafficOverview;
+    engagementOverview?: EngagementOverview;
+    topPages?: TopPageItem[];
+    trendingSongs7d?: TrendingSongItem[];
+  }) {
+    if (dashboard.submissions) setSubmissions(dashboard.submissions);
+    if (dashboard.artists) setArtists(dashboard.artists);
+    if (dashboard.dropEvents) setDropEvents(dashboard.dropEvents);
+    if (dashboard.youtubeCandidates) setYoutubeCandidates(dashboard.youtubeCandidates);
+    if (dashboard.newsItems) setNewsItems(dashboard.newsItems);
+    if (dashboard.newsCategoryCounts) setNewsCategoryCounts(dashboard.newsCategoryCounts);
+    if (dashboard.trafficOverview) setTrafficOverview(dashboard.trafficOverview);
+    if (dashboard.engagementOverview) setEngagementOverview(dashboard.engagementOverview);
+    if (dashboard.topPages) setTopPages(dashboard.topPages);
+    if (dashboard.trendingSongs7d) setTrendingSongs7d(dashboard.trendingSongs7d);
   }
 
   async function moderateSubmission(id: string, action: "approve" | "reject") {
@@ -640,10 +721,7 @@ export function AdminPanel({
     }
 
     const dashboard = await fetch("/api/admin/dashboard").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    if (dashboard?.artists && dashboard?.submissions) {
-      setArtists(dashboard.artists);
-      setSubmissions(dashboard.submissions);
-    }
+    if (dashboard) applyDashboardData(dashboard);
 
     setStatusMessage(
       `Spotify sync: scanned ${payload.scanned}, matched ${payload.matched}, updated ${payload.updated}, noMatch ${payload.noMatchCount}`
@@ -666,13 +744,7 @@ export function AdminPanel({
     }
 
     const dashboard = await fetch("/api/admin/dashboard").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    if (dashboard?.artists && dashboard?.submissions) {
-      setArtists(dashboard.artists);
-      setSubmissions(dashboard.submissions);
-      setYoutubeCandidates(dashboard.youtubeCandidates || []);
-      setNewsItems(dashboard.newsItems || []);
-      setNewsCategoryCounts(dashboard.newsCategoryCounts || {});
-    }
+    if (dashboard) applyDashboardData(dashboard);
 
     setStatusMessage(
       `YouTube sync: candidates ${payload.candidates}, created ${payload.created}, updated ${payload.updated}, unchanged ${payload.unchanged}`
@@ -695,10 +767,7 @@ export function AdminPanel({
     }
 
     const dashboard = await fetch("/api/admin/dashboard").then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    if (dashboard?.newsItems) {
-      setNewsItems(dashboard.newsItems);
-      setNewsCategoryCounts(dashboard.newsCategoryCounts || {});
-    }
+    if (dashboard) applyDashboardData(dashboard);
 
     setStatusMessage(
       `News sync: fetched ${payload.fetched}, deduped ${payload.deduped}, selected ${payload.selected}`
@@ -783,6 +852,95 @@ export function AdminPanel({
   return (
     <section className="space-y-8">
       {statusMessage ? <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{statusMessage}</p> : null}
+
+      <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xl font-semibold">{t.trafficOverview}</h2>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {trafficOverview.uniqueVisitors} visitors tracked
+          </span>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: t.totalPageViews, value: trafficOverview.totalPageViews },
+            { label: t.uniqueVisitors, value: trafficOverview.uniqueVisitors },
+            { label: t.pageViews7d, value: trafficOverview.pageViews7d },
+            { label: t.visitors7d, value: trafficOverview.uniqueVisitors7d }
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">{item.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+          <p className="text-sm font-semibold text-slate-900">{t.engagementOverview}</p>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {[
+              { label: t.artistCardClicks, value: engagementOverview.artistCardClicks },
+              { label: t.artistProfileViewsTotal, value: engagementOverview.artistProfileViews },
+              { label: t.songListenClicksTotal, value: engagementOverview.songListenClicks },
+              { label: t.songSpotlightViewsTotal, value: engagementOverview.songSpotlightViews },
+              { label: t.newsClicksTotal, value: engagementOverview.newsClicks }
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl bg-slate-50 p-4">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-900">{t.hotPages}</p>
+            {topPages.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {topPages.map((item) => (
+              <article key={item.path} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{item.path}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-lg font-bold text-slate-900">{item.views}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.pageViewsLabel}</p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <Link href={item.path} target="_blank" className="text-xs font-semibold text-brand-700 hover:text-brand-600">
+                    {t.openPage}
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+            <p className="text-sm font-semibold text-slate-900">{t.trendingSongs7d}</p>
+            {trendingSongs7d.length === 0 ? <p className="text-sm text-slate-500">{t.analyticsEmpty}</p> : null}
+            {trendingSongs7d.map((item) => (
+              <article key={item.id} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{item.topTrackName || item.latestReleaseName || item.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {item.name} · {getDistrictLabel(item.district)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-lg font-bold text-slate-900">{item.clicks}</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{t.clicks}</p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <Link href={withLang(`/song/${item.id}`, lang)} className="text-xs font-semibold text-brand-700 hover:text-brand-600">
+                    Spotlight
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex items-center justify-between gap-2">

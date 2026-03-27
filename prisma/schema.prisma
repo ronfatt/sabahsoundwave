@@ -41,6 +41,22 @@ enum CandidateStatus {
   DISMISSED
 }
 
+enum AnalyticsEventType {
+  PAGE_VIEW
+  ARTIST_CARD_CLICK
+  ARTIST_PROFILE_VIEW
+  SONG_LISTEN_CLICK
+  SONG_SPOTLIGHT_VIEW
+  NEWS_CLICK
+}
+
+enum AnalyticsEntityType {
+  PAGE
+  ARTIST
+  SONG
+  NEWS
+}
+
 enum District {
   KOTA_KINABALU
   PAPAR
@@ -179,4 +195,20 @@ model NewsItem {
   @@index([publishedAt])
   @@index([region, publishedAt])
   @@index([clickCount, publishedAt])
+}
+
+model AnalyticsEvent {
+  id         String              @id @default(cuid())
+  eventType  AnalyticsEventType
+  entityType AnalyticsEntityType
+  entityId   String?
+  path       String
+  sessionId  String
+  referrer   String?
+  createdAt  DateTime            @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([path, createdAt])
+  @@index([sessionId, createdAt])
 }

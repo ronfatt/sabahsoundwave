@@ -172,6 +172,21 @@ export default async function Home({
     appleMusicUrl: string | null;
     youtubeUrl: string | null;
   }> = [];
+  let trendingThisWeek: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    district: string;
+    topTrackName: string | null;
+    latestReleaseName: string | null;
+    latestReleaseDate: Date | null;
+    topTrackUrl: string | null;
+    latestReleaseUrl: string | null;
+    spotifyUrl: string | null;
+    appleMusicUrl: string | null;
+    youtubeUrl: string | null;
+    clicks: number;
+  }> = [];
   let newsItems: Array<{
     id: string;
     title: string;
@@ -336,6 +351,52 @@ export default async function Home({
     newsItems = [];
   }
 
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const trendingRows = await prisma.analyticsEvent.groupBy({
+      by: ["entityId"],
+      where: {
+        eventType: "SONG_LISTEN_CLICK",
+        entityType: "SONG",
+        entityId: { not: null },
+        createdAt: { gte: sevenDaysAgo }
+      },
+      _count: { entityId: true },
+      orderBy: { _count: { entityId: "desc" } },
+      take: 6
+    });
+    const trendingIds = trendingRows.map((item) => item.entityId).filter((id): id is string => Boolean(id));
+    if (trendingIds.length > 0) {
+      const trendingArtists = await prisma.artist.findMany({
+        where: { id: { in: trendingIds }, status: "APPROVED" },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          district: true,
+          topTrackName: true,
+          latestReleaseName: true,
+          latestReleaseDate: true,
+          topTrackUrl: true,
+          latestReleaseUrl: true,
+          spotifyUrl: true,
+          appleMusicUrl: true,
+          youtubeUrl: true
+        }
+      });
+      const trendingArtistMap = new Map(trendingArtists.map((artist) => [artist.id, artist]));
+      trendingThisWeek = trendingRows
+        .map((row) => {
+          const artist = row.entityId ? trendingArtistMap.get(row.entityId) : null;
+          if (!artist) return null;
+          return { ...artist, clicks: row._count.entityId };
+        })
+        .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    }
+  } catch {
+    trendingThisWeek = [];
+  }
+
   const districtCountMap = new Map(districtCounts.map((item) => [item.district, item._count.district]));
   const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.sabahsoundwave.com";
 
@@ -382,6 +443,7 @@ export default async function Home({
       lang === "ms"
         ? "Belum ada berita tersimpan. Jalankan News Sync di admin atau tunggu cron harian."
         : "No news saved yet. Run News Sync in admin or wait for daily cron.",
+    clicks: lang === "ms" ? "klik" : "clicks",
     faqTitle: "FAQ",
     faqIntro:
       lang === "ms"
@@ -405,6 +467,11 @@ export default async function Home({
     topSpotify: "Top Spotify",
     topYoutube: "Top YouTube",
     weeklySongs: lang === "ms" ? "Baharu Minggu Ini" : "New This Week",
+    trendingThisWeek: lang === "ms" ? "Trending Minggu Ini" : "Trending This Week",
+    trendingThisWeekHint:
+      lang === "ms"
+        ? "Disusun berdasarkan klik dengar sebenar dalam 7 hari terakhir."
+        : "Ranked by real listen clicks from the last 7 days.",
     weeklySongsLead: lang === "ms" ? "Pilihan utama minggu ini" : "Lead release this week",
     weeklySongsQuickHits: lang === "ms" ? "Lagi rilisan baru" : "More fresh drops",
     weeklySongsShareReady: lang === "ms" ? "Sedia untuk kongsi" : "Ready to share now",
@@ -485,6 +552,7 @@ export default async function Home({
   const top10Overall = viralTracks.slice(0, 10);
   const topSpotify = viralTracks.filter((item) => Boolean(item.spotifyUrl || item.topTrackUrl)).slice(0, 10);
   const topYoutube = viralTracks.filter((item) => Boolean(item.youtubeUrl || item.topTrackUrl)).slice(0, 10);
+  const trendingWeekList = trendingThisWeek.length > 0 ? trendingThisWeek : top10Overall.slice(0, 6).map((item) => ({ ...item, clicks: 0, appleMusicUrl: null }));
   const weeklyLeadSong = weeklySongChart[0] ?? null;
   const weeklySecondarySongs = weeklySongChart.slice(1, 5);
   const shareReadySongs = songRecommendations.slice(0, 3);
@@ -756,6 +824,59 @@ export default async function Home({
                 </section>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-100">{t.trendingThisWeek}</h2>
+              <p className="mt-1 text-sm text-slate-300">{t.trendingThisWeekHint}</p>
+            </div>
+            <Link href={withLang("/artists", lang)} className="rounded-lg border border-brand-400/50 px-3 py-2 text-xs font-semibold text-brand-200 hover:border-brand-300">
+              {lang === "ms" ? "Teroka semua artis" : "Browse all artists"}
+            </Link>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {trendingWeekList.map((item, index) => {
+              const songTitle = item.topTrackName || item.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
+              const hasPlayableLink = Boolean(item.topTrackUrl || item.latestReleaseUrl || item.spotifyUrl || item.appleMusicUrl || item.youtubeUrl);
+
+              return (
+                <article key={`trending-week-${item.id}`} className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 shadow-[0_14px_30px_rgba(0,0,0,0.28)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-brand-300">#{index + 1}</p>
+                      <h3 className="mt-2 line-clamp-2 text-lg font-semibold text-slate-100">{songTitle}</h3>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {item.name} · {getDistrictLabel(item.district)}
+                      </p>
+                    </div>
+                    <div className="shrink-0 rounded-full border border-brand-500/25 bg-brand-500/10 px-3 py-1 text-xs font-semibold text-brand-200">
+                      {item.clicks > 0 ? `${item.clicks} ${t.clicks}` : "Fresh"}
+                    </div>
+                  </div>
+                  {formatShortDate(item.latestReleaseDate, lang) ? (
+                    <p className="mt-3 text-xs text-slate-500">
+                      {t.releasedOn}: {formatShortDate(item.latestReleaseDate, lang)}
+                    </p>
+                  ) : null}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {hasPlayableLink ? (
+                      <Link href={buildTrackedListenUrl(item.id)} target="_blank" className="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-slate-950">
+                        {t.listenNow}
+                      </Link>
+                    ) : null}
+                    <Link href={withLang(`/song/${item.id}`, lang)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-100">
+                      Spotlight
+                    </Link>
+                    <Link href={buildTrackedArtistUrl(item.id, lang)} className="rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-300">
+                      {lang === "ms" ? "Profil artis" : "Artist profile"}
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
 

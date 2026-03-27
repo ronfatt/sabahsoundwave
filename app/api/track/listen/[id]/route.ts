@@ -1,3 +1,4 @@
+import { attachAnalyticsSession, getAnalyticsSessionFromRequest, logAnalyticsEvent } from "@/lib/analytics";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const { id } = await context.params;
   const target = request.nextUrl.searchParams.get("target");
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.sabahsoundwave.com";
+  const { sessionId, isNew } = getAnalyticsSessionFromRequest(request);
 
   const artist = await prisma.artist.findUnique({
     where: { id },
@@ -62,5 +64,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     // Keep redirect working if schema is slightly behind.
   }
 
-  return NextResponse.redirect(listenUrl, { status: 307 });
+  await logAnalyticsEvent({
+    eventType: "SONG_LISTEN_CLICK",
+    entityType: "SONG",
+    entityId: id,
+    path: request.nextUrl.pathname,
+    sessionId,
+    referrer: request.headers.get("referer")
+  });
+
+  const response = NextResponse.redirect(listenUrl, { status: 307 });
+  if (isNew) {
+    attachAnalyticsSession(response, sessionId);
+  }
+  return response;
 }

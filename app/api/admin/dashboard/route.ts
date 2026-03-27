@@ -47,6 +47,29 @@ export async function GET(request: NextRequest) {
     lastClickedAt: Date | null;
   }> = [];
   let newsCategoryCounts: Record<string, number> = {};
+  let trafficOverview = {
+    totalPageViews: 0,
+    uniqueVisitors: 0,
+    pageViews7d: 0,
+    uniqueVisitors7d: 0
+  };
+  let engagementOverview = {
+    artistCardClicks: 0,
+    artistProfileViews: 0,
+    songListenClicks: 0,
+    songSpotlightViews: 0,
+    newsClicks: 0
+  };
+  let topPages: Array<{ path: string; views: number }> = [];
+  let trendingSongs7d: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    district: string;
+    topTrackName: string | null;
+    latestReleaseName: string | null;
+    clicks: number;
+  }> = [];
 
   try {
     newsItems = await prisma.newsItem.findMany({
@@ -64,12 +87,140 @@ export async function GET(request: NextRequest) {
     newsCategoryCounts = {};
   }
 
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalPageViews,
+      pageViews7d,
+      uniqueVisitorRows,
+      uniqueVisitorRows7d,
+      topPageRows,
+      trendingSongRows,
+      artistAggregates,
+      newsAggregates
+    ] = await Promise.all([
+      prisma.analyticsEvent.count({ where: { eventType: "PAGE_VIEW" } }),
+      prisma.analyticsEvent.count({ where: { eventType: "PAGE_VIEW", createdAt: { gte: sevenDaysAgo } } }),
+      prisma.analyticsEvent.findMany({ where: { eventType: "PAGE_VIEW" }, distinct: ["sessionId"], select: { sessionId: true } }),
+      prisma.analyticsEvent.findMany({
+        where: { eventType: "PAGE_VIEW", createdAt: { gte: sevenDaysAgo } },
+        distinct: ["sessionId"],
+        select: { sessionId: true }
+      }),
+      prisma.analyticsEvent.groupBy({
+        by: ["path"],
+        where: { eventType: "PAGE_VIEW" },
+        _count: { path: true },
+        orderBy: { _count: { path: "desc" } },
+        take: 8
+      }),
+      prisma.analyticsEvent.groupBy({
+        by: ["entityId"],
+        where: {
+          eventType: "SONG_LISTEN_CLICK",
+          entityType: "SONG",
+          entityId: { not: null },
+          createdAt: { gte: sevenDaysAgo }
+        },
+        _count: { entityId: true },
+        orderBy: { _count: { entityId: "desc" } },
+        take: 8
+      }),
+      prisma.artist.aggregate({
+        _sum: {
+          artistCardClickCount: true,
+          profileViewCount: true,
+          songListenClickCount: true,
+          songSpotlightViewCount: true
+        }
+      }),
+      prisma.newsItem.aggregate({
+        _sum: {
+          clickCount: true
+        }
+      })
+    ]);
+
+    const trendingSongIds = trendingSongRows.map((item) => item.entityId).filter((id): id is string => Boolean(id));
+    const trendingArtists = trendingSongIds.length
+      ? await prisma.artist.findMany({
+          where: { id: { in: trendingSongIds } },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            district: true,
+            topTrackName: true,
+            latestReleaseName: true
+          }
+        })
+      : [];
+    const trendingArtistMap = new Map(trendingArtists.map((artist) => [artist.id, artist]));
+
+    trafficOverview = {
+      totalPageViews,
+      uniqueVisitors: uniqueVisitorRows.length,
+      pageViews7d,
+      uniqueVisitors7d: uniqueVisitorRows7d.length
+    };
+
+    engagementOverview = {
+      artistCardClicks: artistAggregates._sum.artistCardClickCount ?? 0,
+      artistProfileViews: artistAggregates._sum.profileViewCount ?? 0,
+      songListenClicks: artistAggregates._sum.songListenClickCount ?? 0,
+      songSpotlightViews: artistAggregates._sum.songSpotlightViewCount ?? 0,
+      newsClicks: newsAggregates._sum.clickCount ?? 0
+    };
+
+    topPages = topPageRows.map((row) => ({
+      path: row.path,
+      views: row._count.path
+    }));
+
+    trendingSongs7d = trendingSongRows
+      .map((row) => {
+        const artist = row.entityId ? trendingArtistMap.get(row.entityId) : null;
+        if (!artist) return null;
+        return {
+          id: artist.id,
+          name: artist.name,
+          slug: artist.slug,
+          district: artist.district,
+          topTrackName: artist.topTrackName,
+          latestReleaseName: artist.latestReleaseName,
+          clicks: row._count.entityId
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  } catch {
+    trafficOverview = {
+      totalPageViews: 0,
+      uniqueVisitors: 0,
+      pageViews7d: 0,
+      uniqueVisitors7d: 0
+    };
+    engagementOverview = {
+      artistCardClicks: 0,
+      artistProfileViews: 0,
+      songListenClicks: 0,
+      songSpotlightViews: 0,
+      newsClicks: 0
+    };
+    topPages = [];
+    trendingSongs7d = [];
+  }
+
   return NextResponse.json({
     submissions,
     artists,
     dropEvents,
     youtubeCandidates,
     newsItems,
-    newsCategoryCounts
+    newsCategoryCounts,
+    trafficOverview,
+    engagementOverview,
+    topPages,
+    trendingSongs7d
   });
 }

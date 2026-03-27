@@ -90,6 +90,36 @@ type NewsItem = {
   lastClickedAt: string | null;
 };
 
+type TrafficOverview = {
+  totalPageViews: number;
+  uniqueVisitors: number;
+  pageViews7d: number;
+  uniqueVisitors7d: number;
+};
+
+type EngagementOverview = {
+  artistCardClicks: number;
+  artistProfileViews: number;
+  songListenClicks: number;
+  songSpotlightViews: number;
+  newsClicks: number;
+};
+
+type TopPageItem = {
+  path: string;
+  views: number;
+};
+
+type TrendingSongItem = {
+  id: string;
+  name: string;
+  slug: string;
+  district: DistrictValue;
+  topTrackName: string | null;
+  latestReleaseName: string | null;
+  clicks: number;
+};
+
 type AdminData = {
   submissions: ArtistItem[];
   artists: ArtistItem[];
@@ -97,6 +127,10 @@ type AdminData = {
   youtubeCandidates: YoutubeCandidateItem[];
   newsItems: NewsItem[];
   newsCategoryCounts: Record<string, number>;
+  trafficOverview: TrafficOverview;
+  engagementOverview: EngagementOverview;
+  topPages: TopPageItem[];
+  trendingSongs7d: TrendingSongItem[];
 };
 
 export default function AdminPage() {
@@ -218,6 +252,10 @@ export default function AdminPage() {
             initialYoutubeCandidates={data.youtubeCandidates}
             initialNewsItems={data.newsItems}
             initialNewsCategoryCounts={data.newsCategoryCounts}
+            initialTrafficOverview={data.trafficOverview}
+            initialEngagementOverview={data.engagementOverview}
+            initialTopPages={data.topPages}
+            initialTrendingSongs7d={data.trendingSongs7d}
           />
         ) : null}
       </section>

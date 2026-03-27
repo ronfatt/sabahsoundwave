@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/navbar";
 import { SongShareButtons } from "@/components/song-share-buttons";
+import { ViewTracker } from "@/components/view-tracker";
 import { getDistrictLabel } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
@@ -20,17 +21,6 @@ export default async function SongPage({
   const artist = await prisma.artist.findUnique({ where: { id } });
   if (!artist) notFound();
 
-  try {
-    await prisma.artist.update({
-      where: { id: artist.id },
-      data: {
-        songSpotlightViewCount: { increment: 1 }
-      }
-    });
-  } catch {
-    // Keep spotlight page render stable if schema is slightly behind.
-  }
-
   const songTitle = artist.topTrackName || artist.latestReleaseName || (lang === "ms" ? "Lagu terbaru" : "Latest track");
   const listenUrl = artist.topTrackUrl || artist.latestReleaseUrl || artist.spotifyUrl || artist.appleMusicUrl || artist.youtubeUrl;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.sabahsoundwave.com";
@@ -39,6 +29,7 @@ export default async function SongPage({
   return (
     <main>
       <Navbar />
+      <ViewTracker endpoint={`/api/analytics/view/song/${artist.id}`} />
       <section className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 md:px-6">
         <article className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
           <p className="text-xs uppercase tracking-wide text-brand-300">Song Spotlight</p>

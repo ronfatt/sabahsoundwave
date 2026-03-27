@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { Footer } from "@/components/footer";
 
 const siteTitle = "Sabah Soundwave – The Official Home of Sabah Original Music";
@@ -87,6 +88,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
+        <AnalyticsTracker />
         <div className="min-h-screen">
           {children}
           <Footer />
