@@ -80,15 +80,49 @@ function getNewsCategoryMeta(category: NewsCategory, lang: "en" | "ms") {
   }
 }
 
+function parseNewsCategory(value?: string | null): NewsCategory | null {
+  if (
+    value === "new-release" ||
+    value === "artist-update" ||
+    value === "festival" ||
+    value === "interview" ||
+    value === "industry"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function buildHomeUrl({
+  lang,
+  district,
+  genre,
+  newsCategory
+}: {
+  lang: "en" | "ms";
+  district?: string | null;
+  genre?: string | null;
+  newsCategory?: NewsCategory | null;
+}) {
+  const params = new URLSearchParams();
+  params.set("lang", lang);
+  if (district) params.set("district", district);
+  if (genre) params.set("genre", genre);
+  if (newsCategory) params.set("newsCategory", newsCategory);
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
 export default async function Home({
   searchParams
 }: {
-  searchParams: Promise<{ district?: string; genre?: string; lang?: string }>;
+  searchParams: Promise<{ district?: string; genre?: string; lang?: string; newsCategory?: string }>;
 }) {
   const params = await searchParams;
   const lang = parseLang(params.lang);
   const district = parseDistrict(params.district);
   const genre = params.genre;
+  const activeNewsCategory = parseNewsCategory(params.newsCategory);
 
   const filter = {
     status: "APPROVED" as const,
@@ -410,6 +444,8 @@ export default async function Home({
     newsQuickHits: lang === "ms" ? "Berita ringkas" : "Quick hits",
     newsMoreCoverage: lang === "ms" ? "Liputan tambahan" : "More coverage",
     newsGlobal: lang === "ms" ? "Global" : "Global",
+    newsFilterAll: lang === "ms" ? "Semua" : "All",
+    newsFilterLabel: lang === "ms" ? "Tapis mengikut jenis" : "Filter by type",
     latestEmpty: lang === "ms" ? "Tiada artis diluluskan untuk penapis ini." : "No approved artists match this filter.",
     dailyPick: lang === "ms" ? "Pilihan AI Harian" : "Daily AI Pick",
     dailyReasonLabel: lang === "ms" ? "Kenapa hari ini?" : "Why today?"
@@ -473,9 +509,24 @@ export default async function Home({
   const weeklyLeadSong = weeklySongChart[0] ?? null;
   const weeklySecondarySongs = weeklySongChart.slice(1, 5);
   const shareReadySongs = songRecommendations.slice(0, 3);
-  const leadNewsItem = newsItems[0] ?? null;
-  const quickNewsItems = newsItems.slice(1, 5);
-  const moreNewsItems = newsItems.slice(5, 8);
+  const newsWithCategory = newsItems.map((item) => ({
+    ...item,
+    category: classifyNewsCategory(item.title, item.summary)
+  }));
+  const filteredNewsItems = activeNewsCategory
+    ? newsWithCategory.filter((item) => item.category === activeNewsCategory)
+    : newsWithCategory;
+  const leadNewsItem = filteredNewsItems[0] ?? null;
+  const quickNewsItems = filteredNewsItems.slice(1, 5);
+  const moreNewsItems = filteredNewsItems.slice(5, 8);
+  const newsFilterOptions: Array<{ key: NewsCategory | "all"; count: number }> = [
+    { key: "all", count: newsWithCategory.length },
+    { key: "new-release", count: newsWithCategory.filter((item) => item.category === "new-release").length },
+    { key: "artist-update", count: newsWithCategory.filter((item) => item.category === "artist-update").length },
+    { key: "festival", count: newsWithCategory.filter((item) => item.category === "festival").length },
+    { key: "interview", count: newsWithCategory.filter((item) => item.category === "interview").length },
+    { key: "industry", count: newsWithCategory.filter((item) => item.category === "industry").length }
+  ].filter((item): item is { key: NewsCategory | "all"; count: number } => item.count > 0);
   const stats = [
     { label: lang === "ms" ? "Artis Diluluskan" : "Approved Artists", value: dailyCandidates.length },
     { label: lang === "ms" ? "Daerah Aktif" : "Active Districts", value: districtCounts.length },
@@ -919,16 +970,51 @@ export default async function Home({
               <p className="mt-1 text-sm text-slate-300">{t.newsSubtitle}</p>
             </div>
           </div>
-          {newsItems.length === 0 ? <p className="text-sm text-slate-400">{t.newsEmpty}</p> : null}
+          {newsWithCategory.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.newsFilterLabel}</span>
+              {newsFilterOptions.map((option) => {
+                const isActive = option.key === "all" ? !activeNewsCategory : activeNewsCategory === option.key;
+                const meta = option.key === "all" ? null : getNewsCategoryMeta(option.key, lang);
+                return (
+                  <Link
+                    key={option.key}
+                    href={buildHomeUrl({
+                      lang,
+                      district,
+                      genre,
+                      newsCategory: option.key === "all" ? null : option.key
+                    })}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      isActive
+                        ? "border-brand-400 bg-brand-500/15 text-brand-100"
+                        : option.key === "all"
+                          ? "border-slate-700 bg-slate-900/70 text-slate-300 hover:border-brand-400 hover:text-brand-200"
+                          : `${meta?.className} hover:border-brand-300`
+                    }`}
+                  >
+                    <span>{option.key === "all" ? t.newsFilterAll : meta?.label}</span>
+                    <span className="rounded-full bg-slate-950/40 px-1.5 py-0.5 text-[10px] text-inherit">{option.count}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+          {newsWithCategory.length === 0 ? <p className="text-sm text-slate-400">{t.newsEmpty}</p> : null}
+          {newsWithCategory.length > 0 && filteredNewsItems.length === 0 ? (
+            <p className="text-sm text-slate-400">
+              {lang === "ms" ? "Tiada berita untuk kategori ini lagi." : "No news in this category yet."}
+            </p>
+          ) : null}
           {leadNewsItem ? (
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
               <article className="rounded-2xl border border-brand-500/25 bg-[radial-gradient(circle_at_top_left,rgba(0,245,160,0.14),transparent_42%),linear-gradient(180deg,rgba(6,11,21,0.95),rgba(11,17,32,0.92))] p-6 shadow-[0_18px_36px_rgba(0,0,0,0.4)]">
                 <span
                   className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                    getNewsCategoryMeta(classifyNewsCategory(leadNewsItem.title, leadNewsItem.summary), lang).className
+                    getNewsCategoryMeta(leadNewsItem.category, lang).className
                   }`}
                 >
-                  {getNewsCategoryMeta(classifyNewsCategory(leadNewsItem.title, leadNewsItem.summary), lang).label}
+                  {getNewsCategoryMeta(leadNewsItem.category, lang).label}
                 </span>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-300">{t.newsLead}</p>
                 <h3 className="mt-3 text-2xl font-bold leading-tight text-slate-50">{leadNewsItem.title}</h3>
@@ -950,10 +1036,10 @@ export default async function Home({
                         <div className="mb-2">
                           <span
                             className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                              getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).className
+                              getNewsCategoryMeta(item.category, lang).className
                             }`}
                           >
-                            {getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).label}
+                            {getNewsCategoryMeta(item.category, lang).label}
                           </span>
                         </div>
                         <p className="text-sm font-semibold leading-6 text-slate-100">{item.title}</p>
@@ -977,10 +1063,10 @@ export default async function Home({
                           <div className="mb-2">
                             <span
                               className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                                getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).className
+                                getNewsCategoryMeta(item.category, lang).className
                               }`}
                             >
-                              {getNewsCategoryMeta(classifyNewsCategory(item.title, item.summary), lang).label}
+                              {getNewsCategoryMeta(item.category, lang).label}
                             </span>
                           </div>
                           <p className="text-sm font-semibold text-slate-100">{item.title}</p>
