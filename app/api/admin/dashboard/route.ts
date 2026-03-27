@@ -1,4 +1,5 @@
 import { isAdmin } from "@/lib/auth";
+import { classifyNewsCategory } from "@/lib/news-categories";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -35,5 +36,40 @@ export async function GET(request: NextRequest) {
     })
   ]);
 
-  return NextResponse.json({ submissions, artists, dropEvents, youtubeCandidates });
+  let newsItems: Array<{
+    id: string;
+    title: string;
+    url: string;
+    source: string | null;
+    publishedAt: Date;
+    summary: string | null;
+    clickCount: number;
+    lastClickedAt: Date | null;
+  }> = [];
+  let newsCategoryCounts: Record<string, number> = {};
+
+  try {
+    newsItems = await prisma.newsItem.findMany({
+      orderBy: [{ clickCount: "desc" }, { publishedAt: "desc" }],
+      take: 40
+    });
+
+    newsCategoryCounts = newsItems.reduce<Record<string, number>>((acc, item) => {
+      const category = classifyNewsCategory(item.title, item.summary);
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {});
+  } catch {
+    newsItems = [];
+    newsCategoryCounts = {};
+  }
+
+  return NextResponse.json({
+    submissions,
+    artists,
+    dropEvents,
+    youtubeCandidates,
+    newsItems,
+    newsCategoryCounts
+  });
 }

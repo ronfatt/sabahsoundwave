@@ -75,11 +75,24 @@ type YoutubeCandidateItem = {
   updatedAt: string;
 };
 
+type NewsItem = {
+  id: string;
+  title: string;
+  url: string;
+  source: string | null;
+  publishedAt: string;
+  summary: string | null;
+  clickCount: number;
+  lastClickedAt: string | null;
+};
+
 type AdminData = {
   submissions: ArtistItem[];
   artists: ArtistItem[];
   dropEvents: DropEventItem[];
   youtubeCandidates: YoutubeCandidateItem[];
+  newsItems: NewsItem[];
+  newsCategoryCounts: Record<string, number>;
 };
 
 export default function AdminPage() {
@@ -199,6 +212,8 @@ export default function AdminPage() {
             initialArtists={data.artists}
             initialDropEvents={data.dropEvents}
             initialYoutubeCandidates={data.youtubeCandidates}
+            initialNewsItems={data.newsItems}
+            initialNewsCategoryCounts={data.newsCategoryCounts}
           />
         ) : null}
       </section>

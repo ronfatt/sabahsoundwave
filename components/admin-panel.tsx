@@ -74,6 +74,17 @@ type YoutubeCandidateItem = {
   updatedAt: string;
 };
 
+type NewsItem = {
+  id: string;
+  title: string;
+  url: string;
+  source: string | null;
+  publishedAt: string;
+  summary: string | null;
+  clickCount: number;
+  lastClickedAt: string | null;
+};
+
 type SubmissionAiInsight = {
   recommendedPackage: "Starter" | "Pro" | "Label";
   tags: string[];
@@ -90,18 +101,24 @@ export function AdminPanel({
   initialSubmissions,
   initialArtists,
   initialDropEvents,
-  initialYoutubeCandidates
+  initialYoutubeCandidates,
+  initialNewsItems,
+  initialNewsCategoryCounts
 }: {
   lang: Lang;
   initialSubmissions: ArtistItem[];
   initialArtists: ArtistItem[];
   initialDropEvents: DropEventItem[];
   initialYoutubeCandidates: YoutubeCandidateItem[];
+  initialNewsItems: NewsItem[];
+  initialNewsCategoryCounts: Record<string, number>;
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [artists, setArtists] = useState(initialArtists);
   const [dropEvents, setDropEvents] = useState(initialDropEvents);
   const [youtubeCandidates, setYoutubeCandidates] = useState(initialYoutubeCandidates);
+  const [newsItems, setNewsItems] = useState(initialNewsItems);
+  const [newsCategoryCounts, setNewsCategoryCounts] = useState(initialNewsCategoryCounts);
   const [statusMessage, setStatusMessage] = useState("");
   const [dropTitle, setDropTitle] = useState("");
   const [dropDate, setDropDate] = useState("");
@@ -173,6 +190,12 @@ export function AdminPanel({
     newsSync: lang === "ms" ? "Sync News now" : "Sync News now",
     newsSyncRunning: lang === "ms" ? "News sedang sync..." : "News syncing...",
     newsSyncFailed: lang === "ms" ? "Sync News gagal" : "News sync failed",
+    newsInsights: lang === "ms" ? "News Insights" : "News Insights",
+    popularNews: lang === "ms" ? "Berita paling banyak diklik" : "Most-clicked news",
+    newsByCategory: lang === "ms" ? "Pembahagian kategori" : "Category distribution",
+    noNewsData: lang === "ms" ? "Belum ada data berita." : "No news data yet.",
+    clicks: lang === "ms" ? "klik" : "clicks",
+    lastClicked: lang === "ms" ? "Klik terakhir" : "Last clicked",
     youtubeCandidates: lang === "ms" ? "YouTube Candidate Queue" : "YouTube Candidate Queue",
     approveToArtist: lang === "ms" ? "Luluskan ke Artist" : "Approve to Artist",
     dismissCandidate: lang === "ms" ? "Abaikan" : "Dismiss",
@@ -293,6 +316,14 @@ export function AdminPanel({
     if (value === "AUTO_APPROVED") return lang === "ms" ? "Auto Lulus" : "Auto Approved";
     if (value === "VERIFIED") return lang === "ms" ? "Disahkan" : "Verified";
     return lang === "ms" ? "Ditolak" : "Rejected";
+  }
+
+  function newsCategoryLabel(value: string) {
+    if (value === "new-release") return lang === "ms" ? "Rilisan Baru" : "New Release";
+    if (value === "artist-update") return lang === "ms" ? "Kemas Kini Artis" : "Artist Update";
+    if (value === "festival") return lang === "ms" ? "Festival / Acara" : "Festival / Event";
+    if (value === "interview") return lang === "ms" ? "Temu Bual" : "Interview";
+    return lang === "ms" ? "Industri" : "Industry";
   }
 
   async function moderateSubmission(id: string, action: "approve" | "reject") {
@@ -628,6 +659,8 @@ export function AdminPanel({
       setArtists(dashboard.artists);
       setSubmissions(dashboard.submissions);
       setYoutubeCandidates(dashboard.youtubeCandidates || []);
+      setNewsItems(dashboard.newsItems || []);
+      setNewsCategoryCounts(dashboard.newsCategoryCounts || {});
     }
 
     setStatusMessage(
@@ -648,6 +681,12 @@ export function AdminPanel({
     if (!response.ok || !payload) {
       setStatusMessage(`${t.newsSyncFailed}${payload?.error ? `: ${payload.error}` : ""}`);
       return;
+    }
+
+    const dashboard = await fetch("/api/admin/dashboard").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (dashboard?.newsItems) {
+      setNewsItems(dashboard.newsItems);
+      setNewsCategoryCounts(dashboard.newsCategoryCounts || {});
     }
 
     setStatusMessage(
@@ -711,6 +750,8 @@ export function AdminPanel({
   const totalArtistPages = Math.max(1, Math.ceil(filteredArtists.length / ARTISTS_PER_PAGE));
   const currentArtistPage = Math.min(artistPage, totalArtistPages);
   const pagedArtists = filteredArtists.slice((currentArtistPage - 1) * ARTISTS_PER_PAGE, currentArtistPage * ARTISTS_PER_PAGE);
+  const topNewsItems = newsItems.slice(0, 5);
+  const sortedNewsCategories = Object.entries(newsCategoryCounts).sort((a, b) => b[1] - a[1]);
 
   useEffect(() => {
     setArtistPage(1);
@@ -719,6 +760,65 @@ export function AdminPanel({
   return (
     <section className="space-y-8">
       {statusMessage ? <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{statusMessage}</p> : null}
+
+      <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xl font-semibold">{t.newsInsights}</h2>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {newsItems.length} news items
+          </span>
+        </div>
+        {newsItems.length === 0 ? (
+          <p className="text-sm text-slate-500">{t.noNewsData}</p>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+            <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+              <p className="text-sm font-semibold text-slate-900">{t.popularNews}</p>
+              <div className="space-y-2">
+                {topNewsItems.map((item) => (
+                  <article key={item.id} className="rounded-lg bg-slate-50 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-sm font-semibold text-slate-900">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {(item.source || "Global")} · {formatDateTime(item.publishedAt)}
+                        </p>
+                        {item.summary ? <p className="mt-2 line-clamp-2 text-xs text-slate-600">{item.summary}</p> : null}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-lg font-bold text-slate-900">{item.clickCount}</p>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{t.clicks}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                      <span>
+                        {t.lastClicked}: {item.lastClickedAt ? formatDateTime(item.lastClickedAt) : "—"}
+                      </span>
+                      <Link href={item.url} target="_blank" className="font-semibold text-brand-700 hover:text-brand-600">
+                        Open source
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+              <p className="text-sm font-semibold text-slate-900">{t.newsByCategory}</p>
+              <div className="space-y-2">
+                {sortedNewsCategories.map(([key, count]) => (
+                  <div key={key} className="rounded-lg bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium text-slate-800">{newsCategoryLabel(key)}</span>
+                      <span className="font-semibold text-slate-900">{count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
         <h2 className="text-xl font-semibold">{t.youtubeCandidates}</h2>

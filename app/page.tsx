@@ -9,6 +9,7 @@ import { SongShareButtons } from "@/components/song-share-buttons";
 import { DISTRICT_OPTIONS } from "@/lib/constants";
 import { getDistrictLabel, parseDistrict } from "@/lib/district";
 import { parseLang, withLang } from "@/lib/i18n";
+import { classifyNewsCategory, getNewsCategoryPriority, parseNewsCategory, type NewsCategory } from "@/lib/news-categories";
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -19,8 +20,6 @@ export const metadata: Metadata = {
     "Sabah Soundwave helps customers understand exactly what the brand offers, who it serves, and why it is useful."
 };
 
-type NewsCategory = "new-release" | "artist-update" | "festival" | "interview" | "industry";
-
 function formatShortDate(value: Date | string | null | undefined, lang: "en" | "ms") {
   if (!value) return null;
   const date = new Date(value);
@@ -30,24 +29,6 @@ function formatShortDate(value: Date | string | null | undefined, lang: "en" | "
     month: "short",
     day: "numeric"
   });
-}
-
-function classifyNewsCategory(title: string, summary?: string | null): NewsCategory {
-  const haystack = `${title} ${summary || ""}`.toLowerCase();
-
-  if (/(festival|concert|tour|showcase|live|gig|event|lineup)/.test(haystack)) {
-    return "festival";
-  }
-  if (/(interview|q&a|behind the scenes|exclusive|talks|speaks|opens up)/.test(haystack)) {
-    return "interview";
-  }
-  if (/(single|album|ep|track|song|release|drops|debut|music video|mv|video rasmi)/.test(haystack)) {
-    return "new-release";
-  }
-  if (/(joins|signs|collab|collaboration|milestone|wins|award|nominated|announce|returns)/.test(haystack)) {
-    return "artist-update";
-  }
-  return "industry";
 }
 
 function getNewsCategoryMeta(category: NewsCategory, lang: "en" | "ms") {
@@ -78,19 +59,6 @@ function getNewsCategoryMeta(category: NewsCategory, lang: "en" | "ms") {
         className: "border-slate-500/35 bg-slate-500/10 text-slate-200"
       };
   }
-}
-
-function parseNewsCategory(value?: string | null): NewsCategory | null {
-  if (
-    value === "new-release" ||
-    value === "artist-update" ||
-    value === "festival" ||
-    value === "interview" ||
-    value === "industry"
-  ) {
-    return value;
-  }
-  return null;
 }
 
 function buildHomeUrl({
@@ -509,10 +477,18 @@ export default async function Home({
   const weeklyLeadSong = weeklySongChart[0] ?? null;
   const weeklySecondarySongs = weeklySongChart.slice(1, 5);
   const shareReadySongs = songRecommendations.slice(0, 3);
-  const newsWithCategory = newsItems.map((item) => ({
-    ...item,
-    category: classifyNewsCategory(item.title, item.summary)
-  }));
+  const newsWithCategory = newsItems
+    .map((item) => ({
+      ...item,
+      category: classifyNewsCategory(item.title, item.summary)
+    }))
+    .sort((a, b) => {
+      if (!activeNewsCategory) {
+        const priorityDiff = getNewsCategoryPriority(b.category) - getNewsCategoryPriority(a.category);
+        if (priorityDiff !== 0) return priorityDiff;
+      }
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    });
   const filteredNewsItems = activeNewsCategory
     ? newsWithCategory.filter((item) => item.category === activeNewsCategory)
     : newsWithCategory;
@@ -1022,7 +998,7 @@ export default async function Home({
                   {(leadNewsItem.source || t.newsGlobal) + " · " + (formatShortDate(leadNewsItem.publishedAt, lang) || "")}
                 </p>
                 <p className="mt-4 text-sm leading-7 text-slate-300">{leadNewsItem.summary || leadNewsItem.title}</p>
-                <Link href={leadNewsItem.url} target="_blank" rel="noreferrer" className="mt-5 inline-flex rounded-lg border border-brand-400/50 px-4 py-2 text-sm font-semibold text-brand-200 hover:border-brand-300">
+                <Link href={`/api/news/click/${leadNewsItem.id}`} target="_blank" rel="noreferrer" className="mt-5 inline-flex rounded-lg border border-brand-400/50 px-4 py-2 text-sm font-semibold text-brand-200 hover:border-brand-300">
                   {t.readMore}
                 </Link>
               </article>
@@ -1046,7 +1022,7 @@ export default async function Home({
                         <p className="mt-1 text-[11px] text-slate-500">
                           {(item.source || t.newsGlobal) + " · " + (formatShortDate(item.publishedAt, lang) || "")}
                         </p>
-                        <Link href={item.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200 hover:border-brand-300 hover:text-brand-200">
+                        <Link href={`/api/news/click/${item.id}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200 hover:border-brand-300 hover:text-brand-200">
                           {t.readMore}
                         </Link>
                       </article>
@@ -1071,6 +1047,9 @@ export default async function Home({
                           </div>
                           <p className="text-sm font-semibold text-slate-100">{item.title}</p>
                           <p className="mt-1 text-xs text-slate-400">{item.summary || item.title}</p>
+                          <Link href={`/api/news/click/${item.id}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-md border border-slate-600 px-2 py-1 text-[11px] font-semibold text-slate-200 hover:border-brand-300 hover:text-brand-200">
+                            {t.readMore}
+                          </Link>
                         </article>
                       ))}
                     </div>
